@@ -11,19 +11,16 @@ importers:
 
   .:
     dependencies:
-      '@types/estree':
-        specifier: ^1.0.6
-        version: 1.0.6
       estree-walker:
         specifier: ^3.0.3
         version: 3.0.3
-      oxc-parser:
-        specifier: ^0.38.0
-        version: 0.38.0
     devDependencies:
       '@antfu/eslint-config':
         specifier: latest
         version: 3.11.2(@typescript-eslint/utils@8.16.0(eslint@9.15.0(jiti@2.4.0))(typescript@5.7.2))(@vue/compiler-sfc@3.5.13)(eslint@9.15.0(jiti@2.4.0))(typescript@5.7.2)(vitest@2.1.6(@types/node@22.10.1)(jiti@2.4.0)(yaml@2.6.0))
+      '@types/estree':
+        specifier: ^1.0.6
+        version: 1.0.6
       '@types/node':
         specifier: 22.10.1
         version: 22.10.1
@@ -42,6 +39,9 @@ importers:
       lint-staged:
         specifier: latest
         version: 15.2.10
+      oxc-parser:
+        specifier: 0.38.0
+        version: 0.38.0
       simple-git-hooks:
         specifier: latest
         version: 2.11.1

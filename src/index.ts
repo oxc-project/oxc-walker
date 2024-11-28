@@ -19,7 +19,7 @@ export function walk(ast: Program | Node, callback: { enter?: WalkerCallback, le
     leave(node, parent, key, index) {
       callback.leave?.call(this, node as Node, parent as Node | null, { key, index, ast })
     },
-  })
+  }) as Program | Node | null
 }
 
 export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): Program
