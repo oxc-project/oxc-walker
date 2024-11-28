@@ -35,15 +35,15 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "latest",
-    "@types/node": "^22.10.1",
+    "@types/node": "22.10.1",
     "@vitest/coverage-v8": "latest",
     "bumpp": "latest",
     "eslint": "latest",
+    "knip": "5.38.2",
     "lint-staged": "latest",
     "simple-git-hooks": "latest",
     "typescript": "latest",
     "unbuild": "latest",
-    "vite": "latest",
     "vitest": "latest"
   },
   "resolutions": {
