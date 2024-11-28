@@ -35,19 +35,19 @@
     "estree-walker": "^3.0.3"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "latest",
+    "@antfu/eslint-config": "3.11.2",
     "@types/estree": "1.0.6",
     "@types/node": "22.10.1",
-    "@vitest/coverage-v8": "latest",
-    "bumpp": "latest",
-    "eslint": "latest",
+    "@vitest/coverage-v8": "2.1.6",
+    "bumpp": "9.8.1",
+    "eslint": "9.15.0",
     "knip": "5.38.2",
-    "lint-staged": "latest",
+    "lint-staged": "15.2.10",
     "oxc-parser": "0.38.0",
-    "simple-git-hooks": "latest",
-    "typescript": "latest",
-    "unbuild": "latest",
-    "vitest": "latest"
+    "simple-git-hooks": "2.11.1",
+    "typescript": "5.7.2",
+    "unbuild": "2.0.0",
+    "vitest": "2.1.6"
   },
   "resolutions": {
     "oxc-walker": "link:."
