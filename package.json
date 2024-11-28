@@ -54,7 +54,7 @@
   },
   "lint-staged": {
     "*.{js,ts,mjs,cjs,json,.*rc}": [
-      "pnpm eslint --fix"
+      "npx eslint --fix"
     ]
   }
 }
