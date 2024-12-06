@@ -2,7 +2,7 @@
   "name": "oxc-walker",
   "type": "module",
   "version": "0.0.2",
-  "packageManager": "pnpm@9.14.4",
+  "packageManager": "pnpm@9.15.0",
   "description": "",
   "license": "MIT",
   "repository": "danielroe/oxc-walker",
@@ -29,7 +29,7 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": "^0.38.0"
+    "oxc-parser": "^0.38.0 || ^0.39.0"
   },
   "dependencies": {
     "estree-walker": "^3.0.3"
@@ -41,9 +41,9 @@
     "@vitest/coverage-v8": "2.1.8",
     "bumpp": "9.8.1",
     "eslint": "9.16.0",
-    "knip": "5.39.1",
+    "knip": "5.39.2",
     "lint-staged": "15.2.10",
-    "oxc-parser": "0.38.0",
+    "oxc-parser": "0.39.0",
     "simple-git-hooks": "2.11.1",
     "typescript": "5.7.2",
     "unbuild": "2.0.0",
