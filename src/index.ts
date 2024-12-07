@@ -4,6 +4,7 @@ import type { SyncHandler } from 'estree-walker'
 import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, MethodDefinition, ModuleDeclaration, ObjectProperty, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement } from 'oxc-parser'
 
 import { walk as _walk } from 'estree-walker'
+import { createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 
 /** estree also has AssignmentProperty, Identifier and Literal as possible node types */
@@ -22,10 +23,13 @@ export function walk(ast: Program | Node, callback: { enter?: WalkerCallback, le
   }) as Program | Node | null
 }
 
+const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after('.'))
+
 export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): Program
 export function parseAndWalk(code: string, sourceFilename: string, object: { enter?: WalkerCallback, leave?: WalkerCallback }): Program
 export function parseAndWalk(code: string, sourceFilename: string, callback: { enter?: WalkerCallback, leave?: WalkerCallback } | WalkerCallback) {
-  const ast = parseSync(code, { sourceType: 'module', sourceFilename }).program
+  const lang = sourceFilename.match(LANG_RE)?.groups.lang
+  const ast = parseSync(code, sourceFilename, { sourceType: 'module', lang }).program
   walk(ast, typeof callback === 'function' ? { enter: callback } : callback)
   return ast
 }

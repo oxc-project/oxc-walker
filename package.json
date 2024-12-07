@@ -32,7 +32,8 @@
     "oxc-parser": "^0.38.0 || ^0.39.0"
   },
   "dependencies": {
-    "estree-walker": "^3.0.3"
+    "estree-walker": "^3.0.3",
+    "magic-regexp": "^0.8.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "3.11.2",

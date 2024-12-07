@@ -24,52 +24,36 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 26,
+              "end": 7,
               "expression": {
-                "arguments": [
-                  {
-                    "end": 25,
-                    "raw": null,
-                    "start": 12,
-                    "type": "Literal",
-                    "value": "hello world",
-                  },
-                ],
-                "callee": {
-                  "end": 11,
-                  "object": {
-                    "end": 7,
-                    "name": "console",
-                    "start": 0,
-                    "type": "Identifier",
-                  },
-                  "optional": false,
-                  "property": {
-                    "end": 11,
-                    "name": "log",
-                    "start": 8,
-                    "type": "Identifier",
-                  },
+                "end": 7,
+                "object": {
+                  "end": 4,
+                  "name": "test",
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "Identifier",
                 },
-                "end": 26,
                 "optional": false,
+                "property": {
+                  "end": 7,
+                  "name": "js",
+                  "start": 5,
+                  "type": "Identifier",
+                },
                 "start": 0,
-                "type": "CallExpression",
-                "typeParameters": null,
+                "type": "StaticMemberExpression",
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 26,
+          "end": 7,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
             "moduleKind": "module",
-            "variant": "jsx",
+            "variant": "standard",
           },
           "start": 0,
           "type": "Program",
@@ -77,52 +61,36 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 26,
+              "end": 7,
               "expression": {
-                "arguments": [
-                  {
-                    "end": 25,
-                    "raw": null,
-                    "start": 12,
-                    "type": "Literal",
-                    "value": "hello world",
-                  },
-                ],
-                "callee": {
-                  "end": 11,
-                  "object": {
-                    "end": 7,
-                    "name": "console",
-                    "start": 0,
-                    "type": "Identifier",
-                  },
-                  "optional": false,
-                  "property": {
-                    "end": 11,
-                    "name": "log",
-                    "start": 8,
-                    "type": "Identifier",
-                  },
+                "end": 7,
+                "object": {
+                  "end": 4,
+                  "name": "test",
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "Identifier",
                 },
-                "end": 26,
                 "optional": false,
+                "property": {
+                  "end": 7,
+                  "name": "js",
+                  "start": 5,
+                  "type": "Identifier",
+                },
                 "start": 0,
-                "type": "CallExpression",
-                "typeParameters": null,
+                "type": "StaticMemberExpression",
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 26,
+          "end": 7,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
             "moduleKind": "module",
-            "variant": "jsx",
+            "variant": "standard",
           },
           "start": 0,
           "type": "Program",
@@ -145,57 +113,64 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 26,
+              "end": 7,
               "expression": {
-                "arguments": [
-                  {
-                    "end": 25,
-                    "raw": null,
-                    "start": 12,
-                    "type": "Literal",
-                    "value": "hello world",
-                  },
-                ],
-                "callee": {
-                  "end": 11,
-                  "object": {
-                    "end": 7,
-                    "name": "console",
-                    "start": 0,
-                    "type": "Identifier",
-                  },
-                  "optional": false,
-                  "property": {
-                    "end": 11,
-                    "name": "log",
-                    "start": 8,
-                    "type": "Identifier",
-                  },
+                "end": 7,
+                "object": {
+                  "end": 4,
+                  "name": "test",
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "Identifier",
                 },
-                "end": 26,
                 "optional": false,
+                "property": {
+                  "end": 7,
+                  "name": "js",
+                  "start": 5,
+                  "type": "Identifier",
+                },
                 "start": 0,
-                "type": "CallExpression",
-                "typeParameters": null,
+                "type": "StaticMemberExpression",
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 26,
+          "end": 7,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
             "moduleKind": "module",
-            "variant": "jsx",
+            "variant": "standard",
           },
           "start": 0,
           "type": "Program",
         },
       ]
+    `)
+  })
+
+  it('handles language detection', () => {
+    const nodes: Node[] = []
+    parseAndWalk('const render = () => <div></div>', 'test.jsx', {
+      enter(node) {
+        if (node.type !== 'Program') {
+          this.skip()
+          return
+        }
+        nodes.push(node)
+      },
+      leave(node) {
+        nodes.push(node)
+      },
+    })
+    expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`
+      {
+        "language": "javascript",
+        "moduleKind": "module",
+        "variant": "jsx",
+      }
     `)
   })
 })
