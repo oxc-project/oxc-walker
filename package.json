@@ -29,7 +29,7 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": "^0.38.0 || ^0.39.0"
+    "oxc-parser": "^0.39.0"
   },
   "dependencies": {
     "estree-walker": "^3.0.3",
