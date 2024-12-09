@@ -24,31 +24,47 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 7,
+              "end": 26,
               "expression": {
-                "end": 7,
-                "object": {
-                  "end": 4,
-                  "name": "test",
+                "arguments": [
+                  {
+                    "end": 25,
+                    "raw": null,
+                    "start": 12,
+                    "type": "Literal",
+                    "value": "hello world",
+                  },
+                ],
+                "callee": {
+                  "end": 11,
+                  "object": {
+                    "end": 7,
+                    "name": "console",
+                    "start": 0,
+                    "type": "Identifier",
+                  },
+                  "optional": false,
+                  "property": {
+                    "end": 11,
+                    "name": "log",
+                    "start": 8,
+                    "type": "Identifier",
+                  },
                   "start": 0,
-                  "type": "Identifier",
+                  "type": "StaticMemberExpression",
                 },
+                "end": 26,
                 "optional": false,
-                "property": {
-                  "end": 7,
-                  "name": "js",
-                  "start": 5,
-                  "type": "Identifier",
-                },
                 "start": 0,
-                "type": "StaticMemberExpression",
+                "type": "CallExpression",
+                "typeParameters": null,
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 7,
+          "end": 26,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
@@ -61,31 +77,47 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 7,
+              "end": 26,
               "expression": {
-                "end": 7,
-                "object": {
-                  "end": 4,
-                  "name": "test",
+                "arguments": [
+                  {
+                    "end": 25,
+                    "raw": null,
+                    "start": 12,
+                    "type": "Literal",
+                    "value": "hello world",
+                  },
+                ],
+                "callee": {
+                  "end": 11,
+                  "object": {
+                    "end": 7,
+                    "name": "console",
+                    "start": 0,
+                    "type": "Identifier",
+                  },
+                  "optional": false,
+                  "property": {
+                    "end": 11,
+                    "name": "log",
+                    "start": 8,
+                    "type": "Identifier",
+                  },
                   "start": 0,
-                  "type": "Identifier",
+                  "type": "StaticMemberExpression",
                 },
+                "end": 26,
                 "optional": false,
-                "property": {
-                  "end": 7,
-                  "name": "js",
-                  "start": 5,
-                  "type": "Identifier",
-                },
                 "start": 0,
-                "type": "StaticMemberExpression",
+                "type": "CallExpression",
+                "typeParameters": null,
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 7,
+          "end": 26,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
@@ -113,31 +145,47 @@ describe('oxc-walker', () => {
         {
           "body": [
             {
-              "end": 7,
+              "end": 26,
               "expression": {
-                "end": 7,
-                "object": {
-                  "end": 4,
-                  "name": "test",
+                "arguments": [
+                  {
+                    "end": 25,
+                    "raw": null,
+                    "start": 12,
+                    "type": "Literal",
+                    "value": "hello world",
+                  },
+                ],
+                "callee": {
+                  "end": 11,
+                  "object": {
+                    "end": 7,
+                    "name": "console",
+                    "start": 0,
+                    "type": "Identifier",
+                  },
+                  "optional": false,
+                  "property": {
+                    "end": 11,
+                    "name": "log",
+                    "start": 8,
+                    "type": "Identifier",
+                  },
                   "start": 0,
-                  "type": "Identifier",
+                  "type": "StaticMemberExpression",
                 },
+                "end": 26,
                 "optional": false,
-                "property": {
-                  "end": 7,
-                  "name": "js",
-                  "start": 5,
-                  "type": "Identifier",
-                },
                 "start": 0,
-                "type": "StaticMemberExpression",
+                "type": "CallExpression",
+                "typeParameters": null,
               },
               "start": 0,
               "type": "ExpressionStatement",
             },
           ],
           "directives": [],
-          "end": 7,
+          "end": 26,
           "hashbang": null,
           "sourceType": {
             "language": "javascript",
