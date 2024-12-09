@@ -28,7 +28,7 @@ const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedA
 export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): Program
 export function parseAndWalk(code: string, sourceFilename: string, object: { enter?: WalkerCallback, leave?: WalkerCallback }): Program
 export function parseAndWalk(code: string, sourceFilename: string, callback: { enter?: WalkerCallback, leave?: WalkerCallback } | WalkerCallback) {
-  const lang = sourceFilename.match(LANG_RE)?.groups.lang
+  const lang = sourceFilename?.match(LANG_RE)?.groups?.lang
   const ast = parseSync(code, sourceFilename, { sourceType: 'module', lang }).program
   walk(ast, typeof callback === 'function' ? { enter: callback } : callback)
   return ast
