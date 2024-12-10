@@ -12,13 +12,14 @@ export type Node = Declaration | Expression | ClassBody | CatchClause | MethodDe
 
 type WalkerCallback = (this: ThisParameterType<SyncHandler>, node: Node, parent: Node | null, ctx: { key: string | number | symbol | null | undefined, index: number | null | undefined, ast: Program | Node }) => void
 
-export function walk(ast: Program | Node, callback: { enter?: WalkerCallback, leave?: WalkerCallback }) {
+export function walk(input: Program | Node | ParseResult, callback: { enter?: WalkerCallback, leave?: WalkerCallback }) {
+  const [ast, magicString] = 'magicString' in input ? [input.program, input.magicString] : [input]
   return _walk(ast as unknown as ESTreeProgram | ESTreeNode, {
     enter(node, parent, key, index) {
-      callback.enter?.call(this, node as Node, parent as Node | null, { key, index, ast })
+      callback.enter?.call(this, node as Node, parent as Node | null, { key, index, ast, magicString })
     },
     leave(node, parent, key, index) {
-      callback.leave?.call(this, node as Node, parent as Node | null, { key, index, ast })
+      callback.leave?.call(this, node as Node, parent as Node | null, { key, index, ast, magicString })
     },
   }) as Program | Node | null
 }
@@ -30,6 +31,6 @@ export function parseAndWalk(code: string, sourceFilename: string, object: { ent
 export function parseAndWalk(code: string, sourceFilename: string, callback: { enter?: WalkerCallback, leave?: WalkerCallback } | WalkerCallback) {
   const lang = sourceFilename?.match(LANG_RE)?.groups?.lang
   const result = parseSync(sourceFilename, code, { sourceType: 'module', lang })
-  walk(result.program, typeof callback === 'function' ? { enter: callback } : callback)
+  walk(result, typeof callback === 'function' ? { enter: callback } : callback)
   return result
 }
