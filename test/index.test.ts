@@ -29,7 +29,7 @@ describe('oxc-walker', () => {
                 "arguments": [
                   {
                     "end": 25,
-                    "raw": null,
+                    "raw": ""hello world"",
                     "start": 12,
                     "type": "Literal",
                     "value": "hello world",
@@ -82,7 +82,7 @@ describe('oxc-walker', () => {
                 "arguments": [
                   {
                     "end": 25,
-                    "raw": null,
+                    "raw": ""hello world"",
                     "start": 12,
                     "type": "Literal",
                     "value": "hello world",
@@ -150,7 +150,7 @@ describe('oxc-walker', () => {
                 "arguments": [
                   {
                     "end": 25,
-                    "raw": null,
+                    "raw": ""hello world"",
                     "start": 12,
                     "type": "Literal",
                     "value": "hello world",
