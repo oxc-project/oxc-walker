@@ -1,7 +1,7 @@
 import type { Node as ESTreeNode, Program as ESTreeProgram } from 'estree'
 import type { SyncHandler } from 'estree-walker'
 
-import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, MethodDefinition, ModuleDeclaration, ObjectProperty, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement } from 'oxc-parser'
+import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, MethodDefinition, ModuleDeclaration, ObjectProperty, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement } from 'oxc-parser'
 
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
@@ -25,11 +25,11 @@ export function walk(ast: Program | Node, callback: { enter?: WalkerCallback, le
 
 const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after(exactly('.').and(anyOf('c', 'm').optionally())))
 
-export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): Program
-export function parseAndWalk(code: string, sourceFilename: string, object: { enter?: WalkerCallback, leave?: WalkerCallback }): Program
+export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): ParseResult
+export function parseAndWalk(code: string, sourceFilename: string, object: { enter?: WalkerCallback, leave?: WalkerCallback }): ParseResult
 export function parseAndWalk(code: string, sourceFilename: string, callback: { enter?: WalkerCallback, leave?: WalkerCallback } | WalkerCallback) {
   const lang = sourceFilename?.match(LANG_RE)?.groups?.lang
-  const ast = parseSync(sourceFilename, code, { sourceType: 'module', lang }).program
-  walk(ast, typeof callback === 'function' ? { enter: callback } : callback)
-  return ast
+  const result = parseSync(sourceFilename, code, { sourceType: 'module', lang })
+  walk(result.program, typeof callback === 'function' ? { enter: callback } : callback)
+  return result
 }
