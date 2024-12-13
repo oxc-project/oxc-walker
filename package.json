@@ -42,7 +42,7 @@
     "@vitest/coverage-v8": "2.1.8",
     "bumpp": "9.9.1",
     "eslint": "9.16.0",
-    "knip": "5.39.4",
+    "knip": "5.40.0",
     "lint-staged": "15.2.11",
     "oxc-parser": "0.40.1",
     "simple-git-hooks": "2.11.1",
