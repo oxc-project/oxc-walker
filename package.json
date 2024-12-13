@@ -47,7 +47,7 @@
     "oxc-parser": "0.41.0",
     "simple-git-hooks": "2.11.1",
     "typescript": "5.7.2",
-    "unbuild": "3.0.0",
+    "unbuild": "3.0.1",
     "vitest": "2.1.8"
   },
   "resolutions": {
