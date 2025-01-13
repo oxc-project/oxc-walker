@@ -29,25 +29,25 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": "^0.39.0 || ^0.40.0 || ^0.41.0 || ^0.42.0 || ^0.43.0 || ^0.44.0"
+    "oxc-parser": "^0.39.0 || ^0.40.0 || ^0.41.0 || ^0.42.0 || ^0.43.0 || ^0.44.0 || ^0.45.0"
   },
   "dependencies": {
     "estree-walker": "^3.0.3",
     "magic-regexp": "^0.8.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "3.12.1",
+    "@antfu/eslint-config": "3.14.0",
     "@types/estree": "1.0.6",
     "@types/node": "22.10.5",
     "@vitest/coverage-v8": "2.1.8",
-    "bumpp": "9.9.2",
+    "bumpp": "9.10.0",
     "eslint": "9.17.0",
-    "knip": "5.41.1",
+    "knip": "5.42.0",
     "lint-staged": "15.3.0",
-    "oxc-parser": "0.44.0",
+    "oxc-parser": "0.45.0",
     "simple-git-hooks": "2.11.1",
-    "typescript": "5.7.2",
-    "unbuild": "3.2.0",
+    "typescript": "5.7.3",
+    "unbuild": "3.3.0",
     "vitest": "2.1.8"
   },
   "resolutions": {
