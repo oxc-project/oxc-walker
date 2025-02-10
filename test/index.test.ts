@@ -36,6 +36,7 @@ describe('oxc-walker', () => {
                   },
                 ],
                 "callee": {
+                  "computed": false,
                   "end": 11,
                   "object": {
                     "end": 7,
@@ -51,7 +52,7 @@ describe('oxc-walker', () => {
                     "type": "Identifier",
                   },
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "MemberExpression",
                 },
                 "end": 26,
                 "optional": false,
@@ -63,14 +64,9 @@ describe('oxc-walker', () => {
               "type": "ExpressionStatement",
             },
           ],
-          "directives": [],
           "end": 26,
           "hashbang": null,
-          "sourceType": {
-            "language": "javascript",
-            "moduleKind": "module",
-            "variant": "standard",
-          },
+          "sourceType": "module",
           "start": 0,
           "type": "Program",
         },
@@ -89,6 +85,7 @@ describe('oxc-walker', () => {
                   },
                 ],
                 "callee": {
+                  "computed": false,
                   "end": 11,
                   "object": {
                     "end": 7,
@@ -104,7 +101,7 @@ describe('oxc-walker', () => {
                     "type": "Identifier",
                   },
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "MemberExpression",
                 },
                 "end": 26,
                 "optional": false,
@@ -116,14 +113,9 @@ describe('oxc-walker', () => {
               "type": "ExpressionStatement",
             },
           ],
-          "directives": [],
           "end": 26,
           "hashbang": null,
-          "sourceType": {
-            "language": "javascript",
-            "moduleKind": "module",
-            "variant": "standard",
-          },
+          "sourceType": "module",
           "start": 0,
           "type": "Program",
         },
@@ -157,6 +149,7 @@ describe('oxc-walker', () => {
                   },
                 ],
                 "callee": {
+                  "computed": false,
                   "end": 11,
                   "object": {
                     "end": 7,
@@ -172,7 +165,7 @@ describe('oxc-walker', () => {
                     "type": "Identifier",
                   },
                   "start": 0,
-                  "type": "StaticMemberExpression",
+                  "type": "MemberExpression",
                 },
                 "end": 26,
                 "optional": false,
@@ -184,14 +177,9 @@ describe('oxc-walker', () => {
               "type": "ExpressionStatement",
             },
           ],
-          "directives": [],
           "end": 26,
           "hashbang": null,
-          "sourceType": {
-            "language": "javascript",
-            "moduleKind": "module",
-            "variant": "standard",
-          },
+          "sourceType": "module",
           "start": 0,
           "type": "Program",
         },
@@ -213,12 +201,6 @@ describe('oxc-walker', () => {
         nodes.push(node)
       },
     })
-    expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`
-      {
-        "language": "javascript",
-        "moduleKind": "module",
-        "variant": "jsx",
-      }
-    `)
+    expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`"module"`)
   })
 })
