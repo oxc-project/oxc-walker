@@ -41,7 +41,7 @@
     "@types/node": "22.13.4",
     "@vitest/coverage-v8": "3.0.5",
     "bumpp": "10.0.3",
-    "eslint": "9.20.0",
+    "eslint": "9.20.1",
     "knip": "5.44.1",
     "lint-staged": "15.4.3",
     "oxc-parser": "0.51.0",
