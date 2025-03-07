@@ -22,7 +22,7 @@ pnpm install oxc-walker
 ```js
 import { parseAndWalk, walk } from 'oxc-walker'
 
-paresAndWalk(code, filename, (node) => {
+parseAndWalk(code, filename, (node) => {
   // node is typed correctly
 })
 ```
