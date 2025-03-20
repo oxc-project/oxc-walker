@@ -1,14 +1,14 @@
 import type { Node as ESTreeNode, Program as ESTreeProgram } from 'estree'
 import type { SyncHandler } from 'estree-walker'
 
-import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, MethodDefinition, ModuleDeclaration, ObjectProperty, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement } from 'oxc-parser'
+import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, MethodDefinition, ModuleDeclaration, ObjectProperty, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement } from 'oxc-parser'
 
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 
 /** estree also has AssignmentProperty, Identifier and Literal as possible node types */
-export type Node = Declaration | Expression | ClassBody | CatchClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | Pattern | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition
+export type Node = Declaration | Expression | ClassBody | CatchClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | Pattern | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | JSXAttributeItem
 
 interface WalkerCallbackContext {
   /**
@@ -70,15 +70,15 @@ interface WalkOptions {
  * @param input The AST to walk.
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
-export function walk(ast: Program | Node, options: Partial<WalkOptions>) {
+export function walk(input: Program | Node, options: Partial<WalkOptions>) {
   return _walk(
-    ast as unknown as ESTreeProgram | ESTreeNode,
+    input as unknown as ESTreeProgram | ESTreeNode,
     {
       enter(node, parent, key, index) {
-        options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast })
+        options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast: input })
       },
       leave(node, parent, key, index) {
-        options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast })
+        options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast: input })
       },
     },
   ) as Program | Node | null
