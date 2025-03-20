@@ -200,4 +200,20 @@ describe('oxc-walker', () => {
     })
     expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`"module"`)
   })
+
+  it('handles JSXAttribute', () => {
+    parseAndWalk(`<input type="text" />`, 'test.jsx', (node) => {
+      if (node.type === 'JSXAttribute') {
+        expect(node.name.name).toBe('type')
+      }
+    })
+  })
+
+  it('handles JSXText', () => {
+    parseAndWalk(`<div>hello world</div>`, 'test.jsx', (node) => {
+      if (node.type === 'JSXText') {
+        expect(node.value).toBe('hello world')
+      }
+    })
+  })
 })
