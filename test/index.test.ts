@@ -208,4 +208,12 @@ describe('oxc-walker', () => {
       }
     })
   })
+
+  it('handles JSXText', () => {
+    parseAndWalk(`<div>hello world</div>`, 'test.jsx', (node) => {
+      if (node.type === 'JSXText') {
+        expect(node.value).toBe('hello world')
+      }
+    })
+  })
 })
