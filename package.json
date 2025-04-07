@@ -2,7 +2,7 @@
   "name": "oxc-walker",
   "type": "module",
   "version": "0.2.3",
-  "packageManager": "pnpm@10.7.1",
+  "packageManager": "pnpm@10.8.0",
   "description": "",
   "license": "MIT",
   "repository": "danielroe/oxc-walker",
