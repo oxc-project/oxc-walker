@@ -1,14 +1,14 @@
 import type { Node as ESTreeNode, Program as ESTreeProgram } from 'estree'
 import type { SyncHandler } from 'estree-walker'
 
-import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, JSXChild, MethodDefinition, ModuleDeclaration, ObjectProperty, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement, VariableDeclarator } from 'oxc-parser'
+import type { CatchClause, ClassBody, Declaration, ExportSpecifier, Expression, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, JSXChild, MethodDefinition, ModuleDeclaration, ObjectProperty, ParseResult, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement, VariableDeclarator } from 'oxc-parser'
 
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 
 /** estree also has AssignmentProperty, Identifier and Literal as possible node types */
-export type Node = Declaration | VariableDeclarator | Expression | ClassBody | CatchClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | Pattern | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | JSXAttributeItem | JSXChild
+export type Node = Declaration | VariableDeclarator | Expression | ClassBody | CatchClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | JSXAttributeItem | JSXChild
 
 interface WalkerCallbackContext {
   /**
