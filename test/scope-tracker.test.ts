@@ -30,7 +30,7 @@ describe('scope tracker', () => {
     }
     `
 
-    const scopeTracker = new TestScopeTracker({ keepExitedScopes: true })
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true })
 
     parseAndWalk(code, filename, {
       scope: scopeTracker,
@@ -159,7 +159,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     // is in global scope initially
@@ -225,7 +225,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -270,7 +270,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -306,7 +306,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -377,7 +377,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -426,7 +426,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -474,7 +474,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -529,7 +529,7 @@ describe('scope tracker', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {
@@ -629,7 +629,7 @@ describe('parsing', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     let processedFunctions = 0
@@ -704,7 +704,7 @@ describe('parsing', () => {
     `
 
     const scopeTracker = new TestScopeTracker({
-      keepExitedScopes: true,
+      preserveExitedScopes: true,
     })
 
     parseAndWalk(code, filename, {

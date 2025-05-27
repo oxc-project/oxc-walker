@@ -13,11 +13,11 @@ import { walk } from './index'
  * It maintains a stack of scopes, where each scope is a map of identifier names to their corresponding
  * declaration nodes - allowing to get to the declaration easily.
  *
- * The class has integration with the `walk` function to automatically track scopes and declarations
+ * The class has integration with the `walk` function to automatically track scopes and declarations,
  * and that's why only the informative methods are exposed.
  *
  * ### Scope tracking
- * Scopes are created when entering a block statement, however, they are also created
+ * Scopes are created when entering a block statement; however, they are also created
  * for function parameters, loop variable declarations, etc. (e.g. `i` in `for (let i = 0; i < 10; i++) { ... }`).
  * This means that the behaviour is not 100% equivalent to JavaScript's scoping rules, because internally,
  * one JavaScript scope can be spread across multiple scopes in this class.
@@ -63,7 +63,7 @@ export class ScopeTracker {
       this.scopeIndexStack[this.scopeIndexStack.length - 1]!++
     }
 
-    if (!this.options.keepExitedScopes) {
+    if (!this.options.preserveExitedScopes) {
       this.scopes.delete(this.scopeIndexKey)
     }
 
@@ -386,7 +386,7 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
 
 export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctionExpression) {
   const scopeTracker = new ScopeTracker({
-    keepExitedScopes: true,
+    preserveExitedScopes: true,
   })
   const undeclaredIdentifiers = new Set<string>()
 
@@ -566,9 +566,9 @@ export type ScopeTrackerNode =
 
 interface ScopeTrackerOptions {
   /**
-   * If true, the scope tracker will keep exited scopes in memory.
+   * If true, the scope tracker will preserve exited scopes in memory.
    * This is necessary when you want to do a pre-pass to collect all identifiers before walking, for example.
    * @default false
    */
-  keepExitedScopes?: boolean
+  preserveExitedScopes?: boolean
 }

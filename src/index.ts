@@ -3,14 +3,14 @@ import type { SyncHandler } from 'estree-walker'
 
 import type { ArrayPattern, AssignmentPattern, AssignmentTargetMaybeDefault, AssignmentTargetRest, BindingIdentifier, BindingPattern, CatchClause, ClassBody, ClassElement, Declaration, ExportSpecifier, Expression, IdentifierName, IdentifierReference, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, JSXChild, LabelIdentifier, MethodDefinition, ModuleDeclaration, ObjectPattern, ObjectProperty, ParamPattern, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement, TSIndexSignatureName, VariableDeclarator, WithClause } from 'oxc-parser'
 
-import type { ScopeTracker } from './scope-tracker'
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
+import { ScopeTracker } from './scope-tracker'
 
 export type Identifier = IdentifierName | IdentifierReference | BindingIdentifier | LabelIdentifier | TSIndexSignatureName
 
-/** estree also has AssignmentProperty, Identifier and Literal as possible node types */
+/** estree also has AssignmentProperty, Identifier, and Literal as possible node types */
 export type Node = AssignmentTargetMaybeDefault | AssignmentTargetRest | Declaration | VariableDeclarator | Expression | Identifier | ClassBody | ClassElement | CatchClause | WithClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | Pattern | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | BindingPattern | ParamPattern | ObjectPattern | ArrayPattern | AssignmentPattern | JSXAttributeItem | JSXChild
 
 interface WalkerCallbackContext {
@@ -76,7 +76,7 @@ interface _WalkOptions {
    * hoisted identifiers will not be handled properly.
    * @default undefined
    */
-  scope: ScopeTracker | true | WalkScopeTrackingOptions
+  scope: ScopeTracker | true | WalkScopeTrackingOptions // TODO: do we want to allow creating a new ScopeTracker instance in walk for convenience?
 }
 
 interface WalkOptions extends Partial<_WalkOptions> {
@@ -96,31 +96,67 @@ interface WalkOptions extends Partial<_WalkOptions> {
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
 export function walk(input: Program | Node, options: Partial<WalkOptions>) {
-  return _walk(
-    input as unknown as ESTreeProgram | ESTreeNode,
-    {
-      enter(node, parent, key, index) {
-        options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast: input })
+  const scopeTrackingOptions: WalkScopeTrackingOptions = options.scope instanceof ScopeTracker || typeof options.scope !== 'object' ? {} : options.scope
+  const scopeTracker = options.scope instanceof ScopeTracker
+    ? options.scope
+    : options.scope !== undefined
+      ? new ScopeTracker({
+        preserveExitedScopes: scopeTrackingOptions.collect,
+      })
+      : null
+
+  if (scopeTrackingOptions.collect && scopeTracker) {
+    _walk(input as unknown as ESTreeProgram | ESTreeNode, {
+      enter(node) {
+        // @ts-expect-error - accessing a protected property
+        scopeTracker.processNodeEnter(node)
       },
-      leave(node, parent, key, index) {
-        options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast: input })
+      leave(node) {
+        // @ts-expect-error - accessing a protected property
+        scopeTracker.processNodeLeave(node)
       },
-    },
-  ) as Program | Node | null
+    })
+
+    scopeTracker.freeze()
+  }
+
+  // TODO: discuss whether to return an object for future extensibility, or just the AST
+  return {
+    ast: _walk(
+      input as unknown as ESTreeProgram | ESTreeNode,
+      {
+        enter(node, parent, key, index) {
+          if (!scopeTrackingOptions.collect) {
+            // @ts-expect-error - accessing a protected property; estree also has AssignmentProperty type, which is not in Node
+            scopeTracker?.processNodeEnter(node)
+          }
+          options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
+        },
+        leave(node, parent, key, index) {
+          if (!scopeTrackingOptions.collect) {
+            // @ts-expect-error - accessing a protected property; estree also has AssignmentProperty type, which is not in Node
+            scopeTracker?.processNodeLeave(node)
+          }
+          options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
+        },
+      },
+    ) as Program | Node | null,
+    // scopeTracker: scopeTracker as TOptions['scope'] extends undefined ? null : ScopeTracker,
+  }
 }
 
 const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after(exactly('.').and(anyOf('c', 'm').optionally())))
 
 /**
  * Parse the code and walk the AST with the given callback, which is called when entering a node.
- * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx or tsx.
+ * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx, or tsx.
  * @param sourceFilename The filename of the source code. This is used to determine the language of the code.
  * @param callback The callback to be called when entering a node.
  */
 export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): ParseResult
 /**
  * Parse the code and walk the AST with the given callback(s).
- * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx or tsx.
+ * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx, or tsx.
  * @param sourceFilename The filename of the source code. This is used to determine the language of the code.
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
