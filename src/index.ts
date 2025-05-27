@@ -1,7 +1,7 @@
 import type { Node as ESTreeNode, Program as ESTreeProgram } from 'estree'
 import type { SyncHandler } from 'estree-walker'
 
-import type { ArrayPattern, AssignmentPattern, AssignmentTargetMaybeDefault, AssignmentTargetRest, BindingIdentifier, BindingPattern, CatchClause, ClassBody, ClassElement, Declaration, ExportSpecifier, Expression, IdentifierName, IdentifierReference, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, JSXChild, LabelIdentifier, MethodDefinition, ModuleDeclaration, ObjectPattern, ObjectProperty, ParamPattern, ParseResult, Pattern, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement, TSIndexSignatureName, VariableDeclarator, WithClause } from 'oxc-parser'
+import type { ArrayPattern, AssignmentPattern, AssignmentTargetMaybeDefault, AssignmentTargetRest, BindingIdentifier, BindingPattern, CatchClause, ClassBody, ClassElement, Declaration, ExportSpecifier, Expression, IdentifierName, IdentifierReference, ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier, JSXAttributeItem, JSXChild, LabelIdentifier, MethodDefinition, ModuleDeclaration, ObjectPattern, ObjectProperty, ParamPattern, ParseResult, PrivateIdentifier, Program, PropertyDefinition, SpreadElement, Statement, Super, SwitchCase, TemplateElement, TSIndexSignatureName, VariableDeclarator } from 'oxc-parser'
 
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
@@ -11,7 +11,7 @@ import { ScopeTracker } from './scope-tracker'
 export type Identifier = IdentifierName | IdentifierReference | BindingIdentifier | LabelIdentifier | TSIndexSignatureName
 
 /** estree also has AssignmentProperty, Identifier, and Literal as possible node types */
-export type Node = AssignmentTargetMaybeDefault | AssignmentTargetRest | Declaration | VariableDeclarator | Expression | Identifier | ClassBody | ClassElement | CatchClause | WithClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | Pattern | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | BindingPattern | ParamPattern | ObjectPattern | ArrayPattern | AssignmentPattern | JSXAttributeItem | JSXChild
+export type Node = AssignmentTargetMaybeDefault | AssignmentTargetRest | Declaration | VariableDeclarator | Expression | Identifier | ClassBody | ClassElement | CatchClause | MethodDefinition | ModuleDeclaration | ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier | PrivateIdentifier | Program | SpreadElement | Statement | Super | SwitchCase | TemplateElement | ObjectProperty | PropertyDefinition | BindingPattern | ParamPattern | ObjectPattern | ArrayPattern | AssignmentPattern | JSXAttributeItem | JSXChild
 
 interface WalkerCallbackContext {
   /**
@@ -149,14 +149,14 @@ const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedA
 
 /**
  * Parse the code and walk the AST with the given callback, which is called when entering a node.
- * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx, or tsx.
+ * @param code The string with the code to parse and walk. This can be JavaScript, TypeScript, jsx, or tsx.
  * @param sourceFilename The filename of the source code. This is used to determine the language of the code.
  * @param callback The callback to be called when entering a node.
  */
 export function parseAndWalk(code: string, sourceFilename: string, callback: WalkerCallback): ParseResult
 /**
  * Parse the code and walk the AST with the given callback(s).
- * @param code The string with the code to parse and walk. This can be javascript, typescript, jsx, or tsx.
+ * @param code The string with the code to parse and walk. This can be JavaScript, TypeScript, jsx, or tsx.
  * @param sourceFilename The filename of the source code. This is used to determine the language of the code.
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
