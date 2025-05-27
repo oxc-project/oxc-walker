@@ -1,8 +1,8 @@
 {
   "name": "oxc-walker",
   "type": "module",
-  "version": "0.2.2",
-  "packageManager": "pnpm@10.4.1",
+  "version": "0.2.3",
+  "packageManager": "pnpm@10.11.0",
   "description": "",
   "license": "MIT",
   "repository": "danielroe/oxc-walker",
@@ -29,26 +29,26 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": "^0.39.0 || ^0.40.0 || ^0.41.0 || ^0.42.0 || ^0.43.0 || ^0.44.0 || ^0.45.0 || ^0.47.0 || ^0.48.0 || ^0.49.0 || ^0.51.0"
+    "oxc-parser": ">=0.63.0"
   },
   "dependencies": {
     "estree-walker": "^3.0.3",
-    "magic-regexp": "^0.8.0"
+    "magic-regexp": "^0.10.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "4.2.1",
-    "@types/estree": "1.0.6",
-    "@types/node": "22.13.4",
-    "@vitest/coverage-v8": "3.0.5",
-    "bumpp": "10.0.3",
-    "eslint": "9.20.1",
-    "knip": "5.44.1",
-    "lint-staged": "15.4.3",
-    "oxc-parser": "0.51.0",
-    "simple-git-hooks": "2.11.1",
-    "typescript": "5.7.3",
-    "unbuild": "3.3.1",
-    "vitest": "3.0.5"
+    "@antfu/eslint-config": "4.13.2",
+    "@types/estree": "1.0.7",
+    "@types/node": "22.15.21",
+    "@vitest/coverage-v8": "3.1.4",
+    "bumpp": "10.1.1",
+    "eslint": "9.27.0",
+    "knip": "5.58.0",
+    "lint-staged": "16.0.0",
+    "oxc-parser": "0.72.0",
+    "simple-git-hooks": "2.13.0",
+    "typescript": "5.8.3",
+    "unbuild": "3.5.0",
+    "vitest": "3.1.4"
   },
   "resolutions": {
     "oxc-walker": "link:."
