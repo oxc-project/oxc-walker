@@ -390,7 +390,7 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
   })
   const undeclaredIdentifiers = new Set<string>()
 
-  function isIdentifierUndeclared(node: IdentifierReference, parent: Node | null) {
+  function isIdentifierUndeclared(node: Omit<IdentifierReference, 'typeAnnotation'>, parent: Node | null) {
     return !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)
   }
 
