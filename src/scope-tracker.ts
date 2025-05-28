@@ -9,18 +9,40 @@ import type {
 import type { Identifier, Node } from './index'
 import { walk } from './index'
 /**
- * A class to track variable scopes and declarations of identifiers within a JavaScript AST.
- * It maintains a stack of scopes, where each scope is a map of identifier names to their corresponding
- * declaration nodes - allowing to get to the declaration easily.
+ * Tracks variable scopes and identifier declarations within a JavaScript AST.
  *
- * The class has integration with the `walk` function to automatically track scopes and declarations,
- * and that's why only the informative methods are exposed.
+ * Maintains a stack of scopes, each represented as a map from identifier names to their declaration nodes,
+ * enabling efficient lookup of the declaration.
+ *
+ * The ScopeTracker is designed to integrate with the `walk` function,
+ * it automatically manages scope creation and identifier tracking,
+ * so only query and inspection methods are exposed for external use.
  *
  * ### Scope tracking
- * Scopes are created when entering a block statement; however, they are also created
- * for function parameters, loop variable declarations, etc. (e.g. `i` in `for (let i = 0; i < 10; i++) { ... }`).
- * This means that the behaviour is not 100% equivalent to JavaScript's scoping rules, because internally,
- * one JavaScript scope can be spread across multiple scopes in this class.
+ * A new scope is created when entering blocks, function parameters, loop variables, etc.
+ * Note that this representation may split a single JavaScript lexical scope into multiple internal scopes,
+ * meaning it doesn't mirror JavaScript’s scoping 1:1.
+ *
+ * Scopes are represented using a string-based index like `"0-1-2"`, which tracks depth and ancestry.
+ *
+ * #### Root scope
+ * The root scope is represented by an empty string `""`.
+ *
+ * #### Scope key format
+ * Scope keys are hierarchical strings that uniquely identify each scope and its position in the tree.
+ * They are constructed using a depth-based indexing scheme, where:
+ *
+ * - the root scope is represented by an empty string `""`.
+ * - the first child scope is `"0"`.
+ * - a parallel sibling of `"0"` becomes `"1"`, `"2"`, etc.
+ * - a nested scope under `"0"` is `"0-0"`, then its sibling is `"0-1"`, and so on.
+ *
+ * Each segment in the key corresponds to the zero-based index of the scope at that depth level in
+ * the order of AST traversal.
+ *
+ * ### Additional features
+ * - supports freezing the tracker to allow for second passes through the AST without modifying the scope data
+ * (useful for doing a pre-pass to collect all identifiers before walking).
  *
  * @example
  * ```ts
@@ -135,7 +157,7 @@ export class ScopeTracker {
         // make the name of the function available only within the function
         // e.g. const foo = function bar() {  // bar is only available within the function body
         this.pushScope()
-        // can be undefined, for example in class method definitions
+        // can be undefined, for example, in class method definitions
         if (node.id?.name) {
           this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey))
         }
@@ -229,6 +251,10 @@ export class ScopeTracker {
     }
   }
 
+  /**
+   * Check if an identifier is declared in the current scope or any parent scope.
+   * @param name the identifier name to check
+   */
   isDeclared(name: string) {
     if (!this.scopeIndexKey) {
       return this.scopes.get('')?.has(name) || false
@@ -243,6 +269,10 @@ export class ScopeTracker {
     return false
   }
 
+  /**
+   * Get the declaration node for a given identifier name.
+   * @param name the identifier name to look up
+   */
   getDeclaration(name: string): ScopeTrackerNode | null {
     if (!this.scopeIndexKey) {
       return this.scopes.get('')?.get(name) ?? null
@@ -258,6 +288,9 @@ export class ScopeTracker {
     return null
   }
 
+  /**
+   * Get the current scope key.
+   */
   getCurrentScope() {
     return this.scopeIndexKey
   }
@@ -271,7 +304,7 @@ export class ScopeTracker {
    * isCurrentScopeUnder('0-1') // false
    * ```
    *
-   * @param scope the parent scope
+   * @param scope the parent scope key to check against
    * @returns `true` if the current scope is a child of the specified scope, `false` otherwise (also when they are the same)
    */
   isCurrentScopeUnder(scope: string) {
@@ -279,8 +312,8 @@ export class ScopeTracker {
   }
 
   /**
-   * Freezes the scope tracker, preventing further declarations.
-   * It also resets the scope index stack to its initial state, so that the scope tracker can be reused.
+   * Freezes the ScopeTracker, preventing further modifications to its state.
+   * It also resets the scope index stack to its initial state so that the tracker can be reused.
    *
    * This is useful for second passes through the AST.
    */
