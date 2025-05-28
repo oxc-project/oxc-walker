@@ -473,14 +473,14 @@ abstract class BaseNode<T extends Node = Node> {
   }
 
   /**
-   * The starting position of the entire relevant node in the code.
-   * For instance, for a function parameter, this would be the start of the function declaration.
+   * The starting position of the entire node relevant for code transformation.
+   * For instance, for a reference to a variable (ScopeTrackerVariable -> Identifier), this would refer to the start of the VariableDeclaration.
    */
   abstract get start(): number
 
   /**
-   * The ending position of the entire relevant node in the code.
-   * For instance, for a function parameter, this would be the end of the function declaration.
+   * The ending position of the entire node relevant for code transformation.
+   * For instance, for a reference to a variable (ScopeTrackerVariable -> Identifier), this would refer to the end of the VariableDeclaration.
    */
   abstract get end(): number
 
@@ -514,10 +514,16 @@ class ScopeTrackerFunctionParam extends BaseNode {
     this.fnNode = fnNode
   }
 
+  /**
+   * @deprecated The representation of this position may change in the future. Use `.fnNode.start` instead for now.
+   */
   get start() {
     return this.fnNode.start
   }
 
+  /**
+   * @deprecated The representation of this position may change in the future. Use `.fnNode.end` instead for now.
+   */
   get end() {
     return this.fnNode.end
   }
