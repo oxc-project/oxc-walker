@@ -1,6 +1,5 @@
 import { assert, describe, expect, it } from 'vitest'
-import { parseAndWalk } from '../src'
-import { getUndeclaredIdentifiersInFunction, ScopeTracker } from '../src/scope-tracker'
+import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker } from '../src'
 
 const filename = 'test.ts'
 
@@ -16,7 +15,7 @@ describe('scope tracker', () => {
     const scopeTracker = new TestScopeTracker()
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.getScopes().size).toBe(0)
@@ -33,7 +32,7 @@ describe('scope tracker', () => {
     const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.getScopes().size).toBe(2)
@@ -166,7 +165,7 @@ describe('scope tracker', () => {
     expect(scopeTracker.getScopeIndexKey()).toBe('')
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     // is in global scope after parsing
@@ -229,7 +228,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const scopes = scopeTracker.getScopes()
@@ -274,7 +273,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const globalA = scopeTracker.getDeclarationFromScope('a', '')
@@ -310,7 +309,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const scopes = scopeTracker.getScopes()
@@ -381,7 +380,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const scopes = scopeTracker.getScopes()
@@ -430,7 +429,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.isDeclaredInScope('a', '')).toBe(true)
@@ -478,7 +477,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const scopes = scopeTracker.getScopes()
@@ -533,7 +532,7 @@ describe('scope tracker', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.getScopes().size).toBe(2)
@@ -545,7 +544,7 @@ describe('scope tracker', () => {
     `
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.getScopes().size).toBe(3)
@@ -559,7 +558,7 @@ describe('scope tracker', () => {
     `
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     expect(scopeTracker.getScopes().size).toBe(3)
@@ -635,7 +634,7 @@ describe('parsing', () => {
     let processedFunctions = 0
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
       enter: (node) => {
         const currentScope = scopeTracker.getScopeIndexKey()
         if ((node.type !== 'FunctionDeclaration' && node.type !== 'FunctionExpression' && node.type !== 'ArrowFunctionExpression') || !['0', '1', '2-0', '3-0', '4'].includes(currentScope)) {
@@ -708,7 +707,7 @@ describe('parsing', () => {
     })
 
     parseAndWalk(code, filename, {
-      scope: scopeTracker,
+      scopeTracker,
     })
 
     const a = scopeTracker.getDeclarationFromScope('a', '')

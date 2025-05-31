@@ -11,10 +11,10 @@ import type {
   Program,
   TSIndexSignatureName,
 } from 'oxc-parser'
+import type { ScopeTracker } from './scope-tracker'
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
-import { ScopeTracker } from './scope-tracker'
 
 export {
   getUndeclaredIdentifiersInFunction,
@@ -76,26 +76,13 @@ interface WalkerCallbackContext {
 
 type WalkerCallback = (this: ThisParameterType<SyncHandler>, node: Node, parent: Node | null, ctx: WalkerCallbackContext) => void
 
-interface WalkScopeTrackingOptions {
-  /**
-   * Whether to do a pre-pass to collect all identifiers in advance.
-   * @default false
-   */
-  collect?: boolean
-}
-
 interface _WalkOptions {
   /**
-   * Options for managing scope tracking. By default, no scope tracking is performed.
-   *
-   * You can either provide a scope tracker class to use, set this option to `true`, or
-   * provide an object with options to enable scope tracking.
-   *
-   * When set to `true`, no identifier collection will be done beforehand. This means that
-   * hoisted identifiers will not be handled properly.
+   * The instance of `ScopeTracker` to use for tracking declarations and references.
+   * @see ScopeTracker
    * @default undefined
    */
-  scope: ScopeTracker | true | WalkScopeTrackingOptions // TODO: do we want to allow creating a new ScopeTracker instance in walk for convenience?
+  scopeTracker: ScopeTracker
 }
 
 interface WalkOptions extends Partial<_WalkOptions> {
@@ -115,53 +102,23 @@ interface WalkOptions extends Partial<_WalkOptions> {
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
 export function walk(input: Program | Node, options: Partial<WalkOptions>) {
-  const scopeTrackingOptions: WalkScopeTrackingOptions = options.scope instanceof ScopeTracker || typeof options.scope !== 'object' ? {} : options.scope
-  const scopeTracker = options.scope instanceof ScopeTracker
-    ? options.scope
-    : options.scope !== undefined
-      ? new ScopeTracker({
-        preserveExitedScopes: scopeTrackingOptions.collect,
-      })
-      : null
+  const scopeTracker = options.scopeTracker
 
-  if (scopeTrackingOptions.collect && scopeTracker) {
-    _walk(input as unknown as ESTreeProgram | ESTreeNode, {
-      enter(node) {
+  return _walk(
+    input as unknown as ESTreeProgram | ESTreeNode,
+    {
+      enter(node, parent, key, index) {
         // @ts-expect-error - accessing a protected property
-        scopeTracker.processNodeEnter(node)
+        scopeTracker?.processNodeEnter(node)
+        options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
       },
-      leave(node) {
+      leave(node, parent, key, index) {
         // @ts-expect-error - accessing a protected property
-        scopeTracker.processNodeLeave(node)
+        scopeTracker?.processNodeLeave(node)
+        options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
       },
-    })
-
-    scopeTracker.freeze()
-  }
-
-  // TODO: discuss whether to return an object for future extensibility, or just the AST
-  return {
-    ast: _walk(
-      input as unknown as ESTreeProgram | ESTreeNode,
-      {
-        enter(node, parent, key, index) {
-          if (!scopeTrackingOptions.collect) {
-            // @ts-expect-error - accessing a protected property; estree also has AssignmentProperty type, which is not in Node
-            scopeTracker?.processNodeEnter(node)
-          }
-          options.enter?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
-        },
-        leave(node, parent, key, index) {
-          if (!scopeTrackingOptions.collect) {
-            // @ts-expect-error - accessing a protected property; estree also has AssignmentProperty type, which is not in Node
-            scopeTracker?.processNodeLeave(node)
-          }
-          options.leave?.call(this, node as Node, parent as Node | null, { key, index, ast: input } as WalkerCallbackContext)
-        },
-      },
-    ) as Program | Node | null,
-    // scopeTracker: scopeTracker as TOptions['scope'] extends undefined ? null : ScopeTracker,
-  }
+    },
+  ) as Program | Node | null
 }
 
 const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after(exactly('.').and(anyOf('c', 'm').optionally())))
