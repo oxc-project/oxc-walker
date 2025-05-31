@@ -23,7 +23,7 @@ export {
   type ScopeTrackerNode,
 } from './scope-tracker'
 
-export * from '@oxc-project/types'
+export type * from '@oxc-project/types'
 
 export type Identifier =
   IdentifierName
