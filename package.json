@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.11.0",
   "description": "",
   "license": "MIT",
-  "repository": "danielroe/oxc-walker",
+  "repository": "oxc-project/oxc-walker",
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs"
