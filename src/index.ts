@@ -2,45 +2,15 @@ import type { Node as ESTreeNode, Program as ESTreeProgram } from 'estree'
 import type { SyncHandler } from 'estree-walker'
 
 import type {
-  ArrayPattern,
-  AssignmentPattern,
-  AssignmentTargetMaybeDefault,
-  AssignmentTargetRest,
   BindingIdentifier,
-  BindingPattern,
-  BindingProperty,
-  CatchClause,
-  ClassBody,
-  ClassElement,
-  Declaration,
-  ExportSpecifier,
-  Expression,
   IdentifierName,
   IdentifierReference,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier,
-  ImportSpecifier,
-  JSXAttributeItem,
-  JSXChild,
   LabelIdentifier,
-  MethodDefinition,
-  ModuleDeclaration,
-  ObjectPattern,
-  ObjectProperty,
-  ParamPattern,
+  Node,
   ParseResult,
-  PrivateIdentifier,
   Program,
-  PropertyDefinition,
-  SpreadElement,
-  Statement,
-  Super,
-  SwitchCase,
-  TemplateElement,
   TSIndexSignatureName,
-  VariableDeclarator,
 } from 'oxc-parser'
-
 import { walk as _walk } from 'estree-walker'
 import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
@@ -52,49 +22,8 @@ export {
   ScopeTracker,
   type ScopeTrackerNode,
 } from './scope-tracker'
-export type {
-  ArrayPattern,
-  AssignmentPattern,
-  AssignmentTargetMaybeDefault,
-  AssignmentTargetRest,
-  BindingIdentifier,
-  BindingPattern,
-  BindingProperty,
-  CallExpression,
-  CatchClause,
-  ClassBody,
-  ClassElement,
-  Declaration,
-  ExportSpecifier,
-  Expression,
-  IdentifierName,
-  IdentifierReference,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier,
-  ImportSpecifier,
-  JSXAttributeItem,
-  JSXChild,
-  LabelIdentifier,
-  MethodDefinition,
-  ModuleDeclaration,
-  ObjectExpression,
-  ObjectPattern,
-  ObjectProperty,
-  ParamPattern,
-  ParseResult,
-  PrivateIdentifier,
-  Program,
-  PropertyDefinition,
-  ReturnStatement,
-  SpreadElement,
-  Statement,
-  Super,
-  SwitchCase,
-  TemplateElement,
-  TSIndexSignatureName,
-  VariableDeclaration,
-  VariableDeclarator,
-} from 'oxc-parser'
+
+export * from '@oxc-project/types'
 
 export type Identifier =
   IdentifierName
@@ -102,41 +31,6 @@ export type Identifier =
   | BindingIdentifier
   | LabelIdentifier
   | TSIndexSignatureName
-
-/** estree also has AssignmentProperty, Identifier, and Literal as possible node types */
-export type Node =
-  AssignmentTargetMaybeDefault
-  | AssignmentTargetRest
-  | Declaration
-  | VariableDeclarator
-  | Expression
-  | Identifier
-  | ClassBody
-  | ClassElement
-  | CatchClause
-  | MethodDefinition
-  | ModuleDeclaration
-  | ImportSpecifier
-  | ImportDefaultSpecifier
-  | ImportNamespaceSpecifier
-  | ExportSpecifier
-  | PrivateIdentifier
-  | Program
-  | SpreadElement
-  | Statement
-  | Super
-  | SwitchCase
-  | TemplateElement
-  | ObjectProperty
-  | PropertyDefinition
-  | BindingPattern
-  | BindingProperty
-  | ParamPattern
-  | ObjectPattern
-  | ArrayPattern
-  | AssignmentPattern
-  | JSXAttributeItem
-  | JSXChild
 
 interface WalkerCallbackContext {
   /**

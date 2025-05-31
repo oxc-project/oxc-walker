@@ -149,6 +149,7 @@ export class ScopeTracker {
         }
         this.pushScope()
         for (const param of node.params) {
+          // @ts-expect-error - oxc Node type is missing `ParamPattern` (https://github.com/oxc-project/oxc/issues/11415)
           this.declareFunctionParameter(param, node)
         }
         break
@@ -164,12 +165,14 @@ export class ScopeTracker {
 
         this.pushScope()
         for (const param of node.params) {
+          // @ts-expect-error - oxc Node type is missing `ParamPattern` (https://github.com/oxc-project/oxc/issues/11415)
           this.declareFunctionParameter(param, node)
         }
         break
       case 'ArrowFunctionExpression':
         this.pushScope()
         for (const param of node.params) {
+          // @ts-expect-error - oxc Node type is missing `ParamPattern` (https://github.com/oxc-project/oxc/issues/11415)
           this.declareFunctionParameter(param, node)
         }
         break
@@ -373,6 +376,7 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
       }
       if (parent.params.length) {
         for (const param of parent.params) {
+          // @ts-expect-error - oxc Node type is missing `ParamPattern` (https://github.com/oxc-project/oxc/issues/11415)
           const identifiers = getPatternIdentifiers(param)
           if (identifiers.includes(node)) {
             return true

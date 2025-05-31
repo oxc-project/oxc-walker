@@ -21,6 +21,9 @@ importers:
       '@antfu/eslint-config':
         specifier: 4.13.2
         version: 4.13.2(@vue/compiler-sfc@3.5.14)(eslint@9.27.0(jiti@2.4.2))(typescript@5.8.3)(vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jiti@2.4.2)(yaml@2.8.0))
+      '@oxc-project/types':
+        specifier: ^0.72.2
+        version: 0.72.2
       '@types/estree':
         specifier: 1.0.7
         version: 1.0.7
@@ -529,8 +532,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxc-project/types@0.72.0':
-    resolution: {integrity: sha512-XhWPzZC/v9K5GnvdNgqLOKeQiJn1gPMUoDWGiqQztOeI/DWCe5GbLliGb3/DUn3sNENlrQ+aw7YqMX7kCCliIg==}
+  '@oxc-project/types@0.72.2':
+    resolution: {integrity: sha512-il5RF8AP85XC0CMjHF4cnVT9nT/v/ocm6qlZQpSiAR9qBbQMGkFKloBZwm7PcnOdiUX97yHgsKM7uDCCWCu3tg==}
 
   '@oxc-resolver/binding-darwin-arm64@9.0.2':
     resolution: {integrity: sha512-MVyRgP2gzJJtAowjG/cHN3VQXwNLWnY+FpOEsyvDepJki1SdAX/8XDijM1yN6ESD1kr9uhBKjGelC6h3qtT+rA==}
@@ -3250,7 +3253,7 @@ snapshots:
   '@oxc-parser/binding-win32-x64-msvc@0.72.0':
     optional: true
 
-  '@oxc-project/types@0.72.0': {}
+  '@oxc-project/types@0.72.2': {}
 
   '@oxc-resolver/binding-darwin-arm64@9.0.2':
     optional: true
@@ -5117,7 +5120,7 @@ snapshots:
 
   oxc-parser@0.72.0:
     dependencies:
-      '@oxc-project/types': 0.72.0
+      '@oxc-project/types': 0.72.2
     optionalDependencies:
       '@oxc-parser/binding-darwin-arm64': 0.72.0
       '@oxc-parser/binding-darwin-x64': 0.72.0
