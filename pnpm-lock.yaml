@@ -21,9 +21,6 @@ importers:
       '@antfu/eslint-config':
         specifier: 4.13.2
         version: 4.13.2(@vue/compiler-sfc@3.5.14)(eslint@9.27.0(jiti@2.4.2))(typescript@5.8.3)(vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jiti@2.4.2)(yaml@2.8.0))
-      '@oxc-project/types':
-        specifier: ^0.72.2
-        version: 0.72.2
       '@types/estree':
         specifier: 1.0.7
         version: 1.0.7

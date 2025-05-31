@@ -29,7 +29,7 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": ">=0.63.0"
+    "oxc-parser": ">=0.72.0"
   },
   "dependencies": {
     "estree-walker": "^3.0.3",
@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "4.13.2",
-    "@oxc-project/types": "^0.72.2",
     "@types/estree": "1.0.7",
     "@types/node": "22.15.21",
     "@vitest/coverage-v8": "3.1.4",
@@ -60,11 +59,6 @@
   "lint-staged": {
     "*.{js,ts,mjs,cjs,json,.*rc}": [
       "npx eslint --fix"
-    ]
-  },
-  "unbuild": {
-    "externals": [
-      "@oxc-project/types"
     ]
   }
 }

@@ -23,8 +23,6 @@ export {
   type ScopeTrackerNode,
 } from './scope-tracker'
 
-export type * from '@oxc-project/types'
-
 export type Identifier =
   IdentifierName
   | IdentifierReference

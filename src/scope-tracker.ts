@@ -4,9 +4,10 @@ import type {
   Function,
   IdentifierReference,
   ImportDeclarationSpecifier,
+  Node,
   VariableDeclaration,
 } from 'oxc-parser'
-import type { Identifier, Node } from './index'
+import type { Identifier } from './index'
 import { walk } from './index'
 /**
  * Tracks variable scopes and identifier declarations within a JavaScript AST.
