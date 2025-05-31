@@ -433,13 +433,13 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
 
   // first pass to collect all declarations and hoist them
   walk(node, {
-    scope: scopeTracker,
+    scopeTracker,
   })
 
   scopeTracker.freeze()
 
   walk(node, {
-    scope: scopeTracker,
+    scopeTracker,
     enter(node, parent) {
       if (node.type === 'Identifier' && isIdentifierUndeclared(node, parent)) {
         undeclaredIdentifiers.add(node.name)
