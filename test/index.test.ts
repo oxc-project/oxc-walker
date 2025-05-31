@@ -1,4 +1,4 @@
-import type { Node } from '../src'
+import type { Node } from 'oxc-parser'
 import { describe, expect, it } from 'vitest'
 import { parseAndWalk } from '../src'
 
