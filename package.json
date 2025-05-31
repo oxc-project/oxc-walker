@@ -61,5 +61,10 @@
     "*.{js,ts,mjs,cjs,json,.*rc}": [
       "npx eslint --fix"
     ]
+  },
+  "unbuild": {
+    "externals": [
+      "@oxc-project/types"
+    ]
   }
 }
