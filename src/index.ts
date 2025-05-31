@@ -8,6 +8,8 @@ import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 import { ScopeTracker } from './scope-tracker'
 
+export { ScopeTracker } from './scope-tracker'
+
 export type Identifier = IdentifierName | IdentifierReference | BindingIdentifier | LabelIdentifier | TSIndexSignatureName
 
 /** estree also has AssignmentProperty, Identifier, and Literal as possible node types */
