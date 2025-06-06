@@ -44,7 +44,7 @@
     "eslint": "9.28.0",
     "knip": "5.59.1",
     "lint-staged": "16.1.0",
-    "oxc-parser": "0.72.2",
+    "oxc-parser": "0.72.3",
     "simple-git-hooks": "2.13.0",
     "typescript": "5.8.3",
     "unbuild": "3.5.0",
