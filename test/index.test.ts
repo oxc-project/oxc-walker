@@ -201,6 +201,31 @@ describe('oxc-walker', () => {
     expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`"module"`)
   })
 
+  it('handles language extensions in path', () => {
+    let didEncounterTypescript = false
+    parseAndWalk('const foo: number = 1', 'directory.js/file.ts', {
+      enter(node) {
+        if (node.type === 'TSTypeAnnotation') {
+          didEncounterTypescript = true
+        }
+      },
+    })
+    expect(didEncounterTypescript).toBe(true)
+  })
+
+  it('accepts options for parsing', () => {
+    let didEncounterTypescript = false
+    parseAndWalk('const foo: number = 1', 'test.js', {
+      parseOptions: { lang: 'ts' },
+      enter(node) {
+        if (node.type === 'TSTypeAnnotation') {
+          didEncounterTypescript = true
+        }
+      },
+    })
+    expect(didEncounterTypescript).toBe(true)
+  })
+
   it('handles JSXAttribute', () => {
     parseAndWalk(`<input type="text" />`, 'test.jsx', (node) => {
       if (node.type === 'JSXAttribute') {

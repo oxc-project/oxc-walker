@@ -8,12 +8,12 @@ import type {
   LabelIdentifier,
   Node,
   ParseResult,
+  ParserOptions,
   Program,
   TSIndexSignatureName,
 } from 'oxc-parser'
 import type { ScopeTracker } from './scope-tracker'
 import { walk as _walk } from 'estree-walker'
-import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 
 export {
@@ -83,7 +83,7 @@ interface _WalkOptions {
   scopeTracker: ScopeTracker
 }
 
-interface WalkOptions extends Partial<_WalkOptions> {
+type WalkOptions = Partial<_WalkOptions> & {
   /**
    * The function to be called when entering a node.
    */
@@ -119,7 +119,14 @@ export function walk(input: Program | Node, options: Partial<WalkOptions>) {
   ) as Program | Node | null
 }
 
-const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after(exactly('.').and(anyOf('c', 'm').optionally())))
+type ParseAndWalkOptions = WalkOptions & {
+  /**
+   * The options for `oxc-parser` to use when parsing the code.
+   */
+  parseOptions: ParserOptions
+}
+
+const LANG_RE = /\.([cm])?(?<lang>jsx|tsx|js|ts)$/
 
 /**
  * Parse the code and walk the AST with the given callback, which is called when entering a node.
@@ -134,10 +141,15 @@ export function parseAndWalk(code: string, sourceFilename: string, callback: Wal
  * @param sourceFilename The filename of the source code. This is used to determine the language of the code.
  * @param options The options to be used when walking the AST. Here you can specify the callbacks for entering and leaving nodes, as well as other options.
  */
-export function parseAndWalk(code: string, sourceFilename: string, options: Partial<WalkOptions>): ParseResult
-export function parseAndWalk(code: string, sourceFilename: string, arg3: Partial<WalkOptions> | WalkerCallback) {
-  const lang = sourceFilename?.match(LANG_RE)?.groups?.lang
-  const ast = parseSync(sourceFilename, code, { sourceType: 'module', lang })
-  walk(ast.program, typeof arg3 === 'function' ? { enter: arg3 } : arg3)
+export function parseAndWalk(code: string, sourceFilename: string, options: Partial<ParseAndWalkOptions>): ParseResult
+export function parseAndWalk(code: string, sourceFilename: string, arg3: Partial<ParseAndWalkOptions> | WalkerCallback) {
+  const lang = sourceFilename?.match(LANG_RE)?.groups?.lang as ParserOptions['lang']
+  const {
+    parseOptions: _parseOptions = {},
+    ...options
+  } = typeof arg3 === 'function' ? { enter: arg3 } : arg3
+  const parseOptions: ParserOptions = { sourceType: 'module', lang, ..._parseOptions }
+  const ast = parseSync(sourceFilename, code, parseOptions)
+  walk(ast.program, options)
   return ast
 }
