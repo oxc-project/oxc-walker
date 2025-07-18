@@ -23,8 +23,7 @@ export {
   type ScopeTrackerNode,
 } from './scope-tracker'
 
-export type Identifier =
-  IdentifierName
+export type Identifier = IdentifierName
   | IdentifierReference
   | BindingIdentifier
   | LabelIdentifier
