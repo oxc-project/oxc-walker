@@ -84,7 +84,7 @@ interface _WalkOptions {
   scopeTracker: ScopeTracker
 }
 
-type WalkOptions = Partial<_WalkOptions> & {
+interface WalkOptions extends Partial<_WalkOptions> {
   /**
    * The function to be called when entering a node.
    */
@@ -120,7 +120,7 @@ export function walk(input: Program | Node, options: Partial<WalkOptions>) {
   ) as Program | Node | null
 }
 
-type ParseAndWalkOptions = WalkOptions & {
+interface ParseAndWalkOptions extends WalkOptions {
   /**
    * The options for `oxc-parser` to use when parsing the code.
    */
