@@ -14,6 +14,7 @@ import type {
 } from 'oxc-parser'
 import type { ScopeTracker } from './scope-tracker'
 import { walk as _walk } from 'estree-walker'
+import { anyOf, createRegExp, exactly } from 'magic-regexp/further-magic'
 import { parseSync } from 'oxc-parser'
 
 export {
@@ -126,7 +127,7 @@ type ParseAndWalkOptions = WalkOptions & {
   parseOptions: ParserOptions
 }
 
-const LANG_RE = /\.([cm])?(?<lang>jsx|tsx|js|ts)$/
+const LANG_RE = createRegExp(exactly('jsx').or('tsx').or('js').or('ts').groupedAs('lang').after(exactly('.').and(anyOf('c', 'm').optionally())).at.lineEnd())
 
 /**
  * Parse the code and walk the AST with the given callback, which is called when entering a node.
