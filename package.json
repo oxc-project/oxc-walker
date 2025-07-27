@@ -38,16 +38,16 @@
   "devDependencies": {
     "@antfu/eslint-config": "5.0.0",
     "@types/estree": "1.0.8",
-    "@types/node": "24.0.15",
+    "@types/node": "24.1.0",
     "@vitest/coverage-v8": "3.2.4",
     "bumpp": "10.2.0",
-    "eslint": "9.31.0",
+    "eslint": "9.32.0",
     "knip": "5.62.0",
     "lint-staged": "16.1.2",
-    "oxc-parser": "0.77.3",
+    "oxc-parser": "0.78.0",
     "simple-git-hooks": "2.13.0",
     "typescript": "5.8.3",
-    "unbuild": "3.5.0",
+    "unbuild": "3.6.0",
     "vitest": "3.2.4"
   },
   "resolutions": {
