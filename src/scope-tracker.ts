@@ -3,6 +3,7 @@ import type {
   CatchClause,
   Function,
   IdentifierReference,
+  ImportDeclaration,
   ImportDeclarationSpecifier,
   Node,
   VariableDeclaration,
@@ -566,9 +567,9 @@ class ScopeTrackerVariable extends BaseNode<Identifier> {
 
 class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
   type = 'Import' as const
-  importNode: Node
+  importNode: ImportDeclaration
 
-  constructor(node: ImportDeclarationSpecifier, scope: string, importNode: Node) {
+  constructor(node: ImportDeclarationSpecifier, scope: string, importNode: ImportDeclaration) {
     super(node, scope)
     this.importNode = importNode
   }
