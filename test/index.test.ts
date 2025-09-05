@@ -1,6 +1,6 @@
 import type { Node } from 'oxc-parser'
 import { describe, expect, it } from 'vitest'
-import { parseAndWalk } from '../src'
+import { parseAndWalk, walk } from '../src'
 
 describe('oxc-walker', () => {
   it('works', () => {
@@ -14,6 +14,9 @@ describe('oxc-walker', () => {
         nodes.push(node)
       },
       leave(node) {
+        if (node.type !== 'Program') {
+          return
+        }
         nodes.push(node)
       },
     })
@@ -215,5 +218,185 @@ describe('oxc-walker', () => {
         expect(node.value).toBe('hello world')
       }
     })
+  })
+
+  it('supports skipping nodes and all their children', () => {
+    const walkedNodes: string[] = []
+    parseAndWalk('console.log("hello world")', 'test.js', {
+      enter(node) {
+        walkedNodes.push(`enter:${node.type}`)
+        if (node.type === 'CallExpression') {
+          this.skip()
+        }
+      },
+      leave(node) {
+        walkedNodes.push(`leave:${node.type}`)
+      },
+    })
+
+    expect(walkedNodes).toMatchInlineSnapshot(`
+      [
+        "enter:Program",
+        "enter:ExpressionStatement",
+        "enter:CallExpression",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "leave:Program",
+      ]
+    `)
+  })
+
+  it('handles multiple calls of `this.skip`', () => {
+    const walkedNodes: string[] = []
+    parseAndWalk('console.log("hello world")', 'test.js', {
+      enter(node) {
+        walkedNodes.push(`enter:${node.type}`)
+        if (node.type === 'CallExpression') {
+          this.skip()
+          this.skip() // multiple calls to skip should be no-op
+        }
+      },
+      leave(node) {
+        walkedNodes.push(`leave:${node.type}`)
+      },
+    })
+
+    expect(walkedNodes).toMatchInlineSnapshot(`
+      [
+        "enter:Program",
+        "enter:ExpressionStatement",
+        "enter:CallExpression",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "leave:Program",
+      ]
+    `)
+  })
+
+  it('supports removing nodes', () => {
+    const walkedNodes: string[] = []
+    parseAndWalk('console.log("hello world")', 'test.js', {
+      enter(node) {
+        if (node.type === 'Literal') {
+          walkedNodes.push(`enter:${node.type}:${node.value}`)
+          this.remove()
+          return
+        }
+        walkedNodes.push(`enter:${node.type}`)
+      },
+      leave(node) {
+        if (node.type === 'Literal') {
+          walkedNodes.push(`leave:${node.type}:${node.value}`)
+          return
+        }
+        walkedNodes.push(`leave:${node.type}`)
+      },
+    })
+
+    expect(walkedNodes).toMatchInlineSnapshot(`
+      [
+        "enter:Program",
+        "enter:ExpressionStatement",
+        "enter:CallExpression",
+        "enter:MemberExpression",
+        "enter:Identifier",
+        "leave:Identifier",
+        "enter:Identifier",
+        "leave:Identifier",
+        "leave:MemberExpression",
+        "enter:Literal:hello world",
+        "leave:Literal:hello world",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "leave:Program",
+      ]
+    `)
+  })
+
+  it('supports replacing nodes', () => {
+    const walkedNodes: string[] = []
+    parseAndWalk('console.log("hello world")', 'test.js', {
+      enter(node) {
+        if (node.type === 'Literal') {
+          walkedNodes.push(`enter:${node.type}:${node.value}`)
+          this.replace({
+            ...node,
+            value: 'replaced',
+          })
+          return
+        }
+        walkedNodes.push(`enter:${node.type}`)
+      },
+      leave(node) {
+        if (node.type === 'Literal') {
+          walkedNodes.push(`leave:${node.type}:${node.value}`)
+          return
+        }
+        walkedNodes.push(`leave:${node.type}`)
+      },
+    })
+
+    expect(walkedNodes).toMatchInlineSnapshot(`
+      [
+        "enter:Program",
+        "enter:ExpressionStatement",
+        "enter:CallExpression",
+        "enter:MemberExpression",
+        "enter:Identifier",
+        "leave:Identifier",
+        "enter:Identifier",
+        "leave:Identifier",
+        "leave:MemberExpression",
+        "enter:Literal:hello world",
+        "leave:Literal:hello world",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "leave:Program",
+      ]
+    `)
+  })
+
+  it('uses last result of `this.replace` when replacing nodes multiple times', () => {
+    const { program: ast } = parseAndWalk('console.log("hello world")', 'test.js', {
+      enter(node) {
+        if (node.type === 'Literal') {
+          this.replace({
+            ...node,
+            value: 'first',
+          })
+          this.replace({
+            ...node,
+            value: 'second',
+          })
+          this.replace({
+            ...node,
+            value: 'final',
+          })
+        }
+      },
+    })
+
+    const walkedNodes: string[] = []
+    walk(ast, {
+      enter(node) {
+        if (node.type === 'Literal') {
+          walkedNodes.push(`${node.type}:${node.value}`)
+          return
+        }
+        walkedNodes.push(node.type)
+      },
+    })
+
+    expect(walkedNodes).toMatchInlineSnapshot(`
+      [
+        "Program",
+        "ExpressionStatement",
+        "CallExpression",
+        "MemberExpression",
+        "Identifier",
+        "Identifier",
+        "Literal:final",
+      ]
+    `)
   })
 })
