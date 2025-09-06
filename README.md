@@ -21,8 +21,8 @@ pnpm install oxc-walker
 
 ### Walk a parsed AST
 ```ts
-import { walk } from 'oxc-walker'
 import { parseSync } from 'oxc-parser'
+import { walk } from 'oxc-walker'
 
 const ast = parseSync('example.js', 'const x = 1')
 
@@ -39,7 +39,7 @@ walk(ast.program, {
 import { parseAndWalk } from 'oxc-walker'
 
 parseAndWalk('const x = 1', 'example.js', (node, parent, ctx) => {
-    // ...
+  // ...
 })
 ```
 
@@ -98,7 +98,6 @@ _This has a higher precedence than `this.replace()`, so if both are called, the 
 
 > ⚠️ When a `ScopeTracker` is provided, calling `this.remove()` will not update its declarations.
 
-
 ### `parseAndWalk(source, filename, callback, options?)`
 Parse the source code using `oxc-parser`, walk the resulting AST and return the `ParseResult`.
 
@@ -143,7 +142,7 @@ interface ScopeTrackerOptions {
 
 #### Example usage:
 ```ts
-import { ScopeTracker, parseAndWalk } from 'oxc-walker'
+import { parseAndWalk, ScopeTracker } from 'oxc-walker'
 
 const scopeTracker = new ScopeTracker()
 
@@ -159,7 +158,7 @@ parseAndWalk('const x = 1; function foo() { console.log(x) }', 'example.js', {
 ```
 
 ```ts
-import { ScopeTracker, parseAndWalk, walk } from 'oxc-walker'
+import { parseAndWalk, ScopeTracker, walk } from 'oxc-walker'
 
 const code = `
 function foo() {
