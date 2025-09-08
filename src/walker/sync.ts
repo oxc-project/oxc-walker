@@ -44,6 +44,7 @@ export class WalkerSync extends WalkerBase {
   traverse(input: any, key?: keyof Node, index?: number | null, parent?: Node | null): Node | null {
     const ast = input
     const ctx: WalkerCallbackContext = { key: null, index: index ?? null, ast }
+    const hasScopeTracker = !!this.scopeTracker
 
     const _walk = (input: unknown, parent: Node | null, key: keyof Node | null, index: number | null) => {
       if (!isNode(input)) {
@@ -89,7 +90,8 @@ export class WalkerSync extends WalkerBase {
       }
 
       // walk the child nodes of the current node or the replaced new node
-      if (!skipChildren && currentNode) {
+      // (we need to walk everything when scope tracking)
+      if ((!skipChildren || hasScopeTracker) && currentNode) {
         for (const k in currentNode) {
           const node = currentNode[k as keyof typeof currentNode]
           if (!node || typeof node !== 'object') {
@@ -100,9 +102,16 @@ export class WalkerSync extends WalkerBase {
             for (let i = 0; i < node.length; i++) {
               const child = node[i]
               if (isNode(child)) {
-                if (_walk(child, currentNode, k as keyof Node, i) === null) {
-                  // removed a node, adjust index not to skip next node
-                  i--
+                if (skipChildren) {
+                  // still need to track scopes even if skipping
+                  this.scopeTracker?.processNodeEnter(child)
+                  this.scopeTracker?.processNodeLeave(child)
+                }
+                else {
+                  if (_walk(child, currentNode, k as keyof Node, i) === null) {
+                    // removed a node, adjust index not to skip next node
+                    i--
+                  }
                 }
               }
             }
