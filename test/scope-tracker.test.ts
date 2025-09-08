@@ -1,5 +1,5 @@
 import { assert, describe, expect, it } from 'vitest'
-import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker } from '../src'
+import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from '../src'
 
 const filename = 'test.ts'
 
@@ -567,6 +567,50 @@ describe('scope tracker', () => {
     expect(scopeTracker.isDeclaredInScope('b', '0')).toBe(true)
     expect(scopeTracker.isDeclaredInScope('c', '1')).toBe(true)
     expect(scopeTracker.isDeclaredInScope('d', '2')).toBe(false)
+  })
+
+  it('should work with skipping', () => {
+    const code = `
+    import { onMounted } from '#imports'
+
+    onMounted(() => console.log('treeshake this'))
+
+    function foo() {
+      onMounted()
+
+      function onMounted() {
+        console.log('do not treeshake this')
+      }
+    }
+    `
+
+    const scopeTracker = new TestScopeTracker({
+      preserveExitedScopes: true,
+    })
+
+    const { program } = parseAndWalk(code, filename, { scopeTracker })
+
+    const walkedFunctions: string[] = []
+
+    walk(program, {
+      enter(node) {
+        if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || node.callee.name !== 'onMounted') {
+          return
+        }
+        this.skip()
+
+        const declaration = scopeTracker.getDeclaration(node.callee.name)
+        walkedFunctions.push(`${node.callee.name} -> ${declaration?.type || 'not found'}`)
+      },
+      scopeTracker,
+    })
+
+    expect(walkedFunctions).toMatchInlineSnapshot(`
+      [
+        "onMounted -> Import",
+        "onMounted -> Function",
+      ]
+    `)
   })
 })
 
