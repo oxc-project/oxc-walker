@@ -49,7 +49,7 @@ import { walk } from './index'
  * ```ts
  * const scopeTracker = new ScopeTracker()
  * walk(code, {
- *   scope: scopeTracker,
+ *   scopeTracker,
  *   enter(node) {
  *     // ...
  *   },
