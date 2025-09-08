@@ -1,7 +1,7 @@
 {
   "name": "oxc-walker",
   "type": "module",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "packageManager": "pnpm@10.15.1",
   "description": "",
   "license": "MIT",
