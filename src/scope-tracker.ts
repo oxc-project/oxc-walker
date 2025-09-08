@@ -8,8 +8,14 @@ import type {
   Node,
   VariableDeclaration,
 } from 'oxc-parser'
-import type { Identifier } from './index'
-import { walk } from './index'
+import type { Identifier } from './walk'
+import { walk } from './walk'
+
+export interface ScopeTrackerProtected {
+  processNodeEnter: (node: Node) => void
+  processNodeLeave: (node: Node) => void
+}
+
 /**
  * Tracks variable scopes and identifier declarations within a JavaScript AST.
  *
@@ -136,7 +142,7 @@ export class ScopeTracker {
     }
   }
 
-  protected processNodeEnter(node: Node) {
+  protected processNodeEnter: ScopeTrackerProtected['processNodeEnter'] = (node) => {
     switch (node.type) {
       case 'Program':
       case 'BlockStatement':
@@ -232,7 +238,7 @@ export class ScopeTracker {
     }
   }
 
-  protected processNodeLeave(node: Node) {
+  protected processNodeLeave: ScopeTrackerProtected['processNodeLeave'] = (node) => {
     switch (node.type) {
       case 'Program':
       case 'BlockStatement':
