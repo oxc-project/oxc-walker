@@ -46,7 +46,13 @@ export class WalkerSync extends WalkerBase {
     const ctx: WalkerCallbackContext = { key: null, index: index ?? null, ast }
     const hasScopeTracker = !!this.scopeTracker
 
-    const _walk = (input: unknown, parent: Node | null, key: keyof Node | null, index: number | null) => {
+    const _walk = (
+      input: unknown,
+      parent: Node | null,
+      key: keyof Node | null,
+      index: number | null,
+      skip: boolean,
+    ) => {
       if (!isNode(input)) {
         return null
       }
@@ -54,9 +60,9 @@ export class WalkerSync extends WalkerBase {
       this.scopeTracker?.processNodeEnter(input)
       let currentNode: Node | null = input
       let removedInEnter = false
-      let skipChildren = false
+      let skipChildren = skip
 
-      if (this.enter) {
+      if (this.enter && !skip) {
         const _skip = this._skip
         const _remove = this._remove
         const _replacement = this._replacement
@@ -102,29 +108,22 @@ export class WalkerSync extends WalkerBase {
             for (let i = 0; i < node.length; i++) {
               const child = node[i]
               if (isNode(child)) {
-                if (skipChildren) {
-                  // still need to track scopes even if skipping
-                  this.scopeTracker?.processNodeEnter(child)
-                  this.scopeTracker?.processNodeLeave(child)
-                }
-                else {
-                  if (_walk(child, currentNode, k as keyof Node, i) === null) {
-                    // removed a node, adjust index not to skip next node
-                    i--
-                  }
+                if (_walk(child, currentNode, k as keyof Node, i, skipChildren) === null) {
+                  // removed a node, adjust index not to skip next node
+                  i--
                 }
               }
             }
           }
           else if (isNode(node)) {
-            _walk(node, currentNode, k as keyof Node, null)
+            _walk(node, currentNode, k as keyof Node, null, skipChildren)
           }
         }
       }
 
       this.scopeTracker?.processNodeLeave(input)
 
-      if (this.leave) {
+      if (this.leave && !skip) {
         const _replacement = this._replacement
         const _remove = this._remove
         this._replacement = null
@@ -156,6 +155,6 @@ export class WalkerSync extends WalkerBase {
       return currentNode
     }
 
-    return _walk(input, parent ?? null, key ?? null, index ?? null)
+    return _walk(input, parent ?? null, key ?? null, index ?? null, false)
   }
 }
