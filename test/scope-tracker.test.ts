@@ -1,5 +1,21 @@
+import type { Node } from 'oxc-parser'
 import { assert, describe, expect, it } from 'vitest'
 import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from '../src'
+
+function getNodeString(node: Node) {
+  const parts: string[] = [node.type]
+  if ('name' in node) {
+    parts.push(`${node.name}`)
+  }
+  if ('value' in node) {
+    parts.push(`${node.value}`)
+  }
+  if ('async' in node) {
+    parts.push(`async=${node.async}`)
+  }
+
+  return parts.join(':')
+}
 
 const filename = 'test.ts'
 
@@ -590,25 +606,73 @@ describe('scope tracker', () => {
 
     const { program } = parseAndWalk(code, filename, { scopeTracker })
 
-    const walkedFunctions: string[] = []
+    scopeTracker.freeze()
+
+    const walkedNodes: string[] = []
 
     walk(program, {
+      scopeTracker,
       enter(node) {
-        if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || node.callee.name !== 'onMounted') {
+        if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'onMounted') {
+          this.skip()
+          const declaration = scopeTracker.getDeclaration(node.callee.name)
+          walkedNodes.push(`${node.callee.name} -> ${declaration?.type || 'not found'}`)
           return
         }
-        this.skip()
 
-        const declaration = scopeTracker.getDeclaration(node.callee.name)
-        walkedFunctions.push(`${node.callee.name} -> ${declaration?.type || 'not found'}`)
+        walkedNodes.push(`enter:${getNodeString(node)}`)
       },
-      scopeTracker,
+      leave(node) {
+        walkedNodes.push(`leave:${getNodeString(node)}`)
+      },
     })
 
-    expect(walkedFunctions).toMatchInlineSnapshot(`
+    expect(walkedNodes).toMatchInlineSnapshot(`
       [
+        "enter:Program",
+        "enter:ImportDeclaration",
+        "enter:ImportSpecifier",
+        "enter:Identifier:onMounted",
+        "leave:Identifier:onMounted",
+        "enter:Identifier:onMounted",
+        "leave:Identifier:onMounted",
+        "leave:ImportSpecifier",
+        "enter:Literal:#imports",
+        "leave:Literal:#imports",
+        "leave:ImportDeclaration",
+        "enter:ExpressionStatement",
         "onMounted -> Import",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "enter:FunctionDeclaration:async=false",
+        "enter:Identifier:foo",
+        "leave:Identifier:foo",
+        "enter:BlockStatement",
+        "enter:ExpressionStatement",
         "onMounted -> Function",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "enter:FunctionDeclaration:async=false",
+        "enter:Identifier:onMounted",
+        "leave:Identifier:onMounted",
+        "enter:BlockStatement",
+        "enter:ExpressionStatement",
+        "enter:CallExpression",
+        "enter:MemberExpression",
+        "enter:Identifier:console",
+        "leave:Identifier:console",
+        "enter:Identifier:log",
+        "leave:Identifier:log",
+        "leave:MemberExpression",
+        "enter:Literal:do not treeshake this",
+        "leave:Literal:do not treeshake this",
+        "leave:CallExpression",
+        "leave:ExpressionStatement",
+        "leave:BlockStatement",
+        "leave:FunctionDeclaration:async=false",
+        "leave:BlockStatement",
+        "leave:FunctionDeclaration:async=false",
+        "leave:Program",
       ]
     `)
   })
