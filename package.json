@@ -2,7 +2,7 @@
   "name": "oxc-walker",
   "type": "module",
   "version": "0.5.2",
-  "packageManager": "pnpm@10.19.0",
+  "packageManager": "pnpm@10.20.0",
   "description": "",
   "license": "MIT",
   "repository": "oxc-project/oxc-walker",
@@ -35,18 +35,18 @@
     "magic-regexp": "^0.10.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "6.1.0",
-    "@types/node": "24.9.1",
-    "@vitest/coverage-v8": "4.0.3",
+    "@antfu/eslint-config": "6.2.0",
+    "@types/node": "24.9.2",
+    "@vitest/coverage-v8": "4.0.6",
     "bumpp": "10.3.1",
-    "eslint": "9.38.0",
-    "knip": "5.66.3",
+    "eslint": "9.39.0",
+    "knip": "5.67.0",
     "lint-staged": "16.2.6",
-    "oxc-parser": "0.95.0",
+    "oxc-parser": "0.96.0",
     "simple-git-hooks": "2.13.1",
     "typescript": "5.9.3",
     "unbuild": "3.6.1",
-    "vitest": "4.0.3"
+    "vitest": "4.0.6"
   },
   "resolutions": {
     "oxc-walker": "link:."
