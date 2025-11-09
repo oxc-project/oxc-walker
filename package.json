@@ -36,17 +36,17 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "6.2.0",
-    "@types/node": "24.9.2",
-    "@vitest/coverage-v8": "4.0.6",
+    "@types/node": "24.10.0",
+    "@vitest/coverage-v8": "4.0.8",
     "bumpp": "10.3.1",
-    "eslint": "9.39.0",
-    "knip": "5.67.0",
+    "eslint": "9.39.1",
+    "knip": "5.68.0",
     "lint-staged": "16.2.6",
     "oxc-parser": "0.96.0",
     "simple-git-hooks": "2.13.1",
     "typescript": "5.9.3",
     "unbuild": "3.6.1",
-    "vitest": "4.0.6"
+    "vitest": "4.0.8"
   },
   "resolutions": {
     "oxc-walker": "link:."
