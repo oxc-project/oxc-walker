@@ -2,3 +2,5 @@ packages:
   - playground
 
 verifyDepsBeforeRun: install
+trustPolicy: no-downgrade
+
