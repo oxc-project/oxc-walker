@@ -29,7 +29,7 @@
     "test:types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "oxc-parser": ">=0.72.0"
+    "oxc-parser": ">=0.98.0"
   },
   "dependencies": {
     "magic-regexp": "^0.10.0"
