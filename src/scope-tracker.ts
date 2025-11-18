@@ -7,13 +7,13 @@ import type {
   ImportDeclarationSpecifier,
   Node,
   VariableDeclaration,
-} from 'oxc-parser'
-import type { Identifier } from './walk'
-import { walk } from './walk'
+} from "oxc-parser";
+import type { Identifier } from "./walk";
+import { walk } from "./walk";
 
 export interface ScopeTrackerProtected {
-  processNodeEnter: (node: Node) => void
-  processNodeLeave: (node: Node) => void
+  processNodeEnter: (node: Node) => void;
+  processNodeLeave: (node: Node) => void;
 }
 
 /**
@@ -67,197 +67,238 @@ export interface ScopeTrackerProtected {
  * @see walk
  */
 export class ScopeTracker {
-  protected scopeIndexStack: number[] = []
-  protected scopeIndexKey = ''
-  protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map()
+  protected scopeIndexStack: number[] = [];
+  protected scopeIndexKey = "";
+  protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
 
-  protected options: Partial<ScopeTrackerOptions>
-  protected isFrozen = false
+  protected options: Partial<ScopeTrackerOptions>;
+  protected isFrozen = false;
 
   constructor(options: ScopeTrackerOptions = {}) {
-    this.options = options
+    this.options = options;
   }
 
   protected updateScopeIndexKey() {
-    this.scopeIndexKey = this.scopeIndexStack.slice(0, -1).join('-')
+    this.scopeIndexKey = this.scopeIndexStack.slice(0, -1).join("-");
   }
 
   protected pushScope() {
-    this.scopeIndexStack.push(0)
-    this.updateScopeIndexKey()
+    this.scopeIndexStack.push(0);
+    this.updateScopeIndexKey();
   }
 
   protected popScope() {
-    this.scopeIndexStack.pop()
+    this.scopeIndexStack.pop();
     if (this.scopeIndexStack[this.scopeIndexStack.length - 1] !== undefined) {
-      this.scopeIndexStack[this.scopeIndexStack.length - 1]!++
+      this.scopeIndexStack[this.scopeIndexStack.length - 1]!++;
     }
 
     if (!this.options.preserveExitedScopes) {
-      this.scopes.delete(this.scopeIndexKey)
+      this.scopes.delete(this.scopeIndexKey);
     }
 
-    this.updateScopeIndexKey()
+    this.updateScopeIndexKey();
   }
 
   protected declareIdentifier(name: string, data: ScopeTrackerNode) {
     if (this.isFrozen) {
-      return
+      return;
     }
 
-    let scope = this.scopes.get(this.scopeIndexKey)
+    let scope = this.scopes.get(this.scopeIndexKey);
     if (!scope) {
-      scope = new Map()
-      this.scopes.set(this.scopeIndexKey, scope)
+      scope = new Map();
+      this.scopes.set(this.scopeIndexKey, scope);
     }
-    scope.set(name, data)
+    scope.set(name, data);
   }
 
-  protected declareFunctionParameter(param: Node, fn: Function | ArrowFunctionExpression) {
+  protected declareFunctionParameter(
+    param: Node,
+    fn: Function | ArrowFunctionExpression,
+  ) {
     if (this.isFrozen) {
-      return
+      return;
     }
 
-    const identifiers = getPatternIdentifiers(param)
-    for (const identifier of identifiers) {
-      this.declareIdentifier(identifier.name, new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, fn))
-    }
-  }
-
-  protected declarePattern(pattern: Node, parent: VariableDeclaration | ArrowFunctionExpression | CatchClause | Function) {
-    if (this.isFrozen) {
-      return
-    }
-
-    const identifiers = getPatternIdentifiers(pattern)
+    const identifiers = getPatternIdentifiers(param);
     for (const identifier of identifiers) {
       this.declareIdentifier(
         identifier.name,
-        parent.type === 'VariableDeclaration'
-          ? new ScopeTrackerVariable(identifier, this.scopeIndexKey, parent)
-          : parent.type === 'CatchClause'
-            ? new ScopeTrackerCatchParam(identifier, this.scopeIndexKey, parent)
-            : new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, parent),
-      )
+        new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, fn),
+      );
     }
   }
 
-  protected processNodeEnter: ScopeTrackerProtected['processNodeEnter'] = (node) => {
-    switch (node.type) {
-      case 'Program':
-      case 'BlockStatement':
-      case 'StaticBlock':
-        this.pushScope()
-        break
+  protected declarePattern(
+    pattern: Node,
+    parent:
+      | VariableDeclaration
+      | ArrowFunctionExpression
+      | CatchClause
+      | Function,
+  ) {
+    if (this.isFrozen) {
+      return;
+    }
 
-      case 'FunctionDeclaration':
+    const identifiers = getPatternIdentifiers(pattern);
+    for (const identifier of identifiers) {
+      this.declareIdentifier(
+        identifier.name,
+        parent.type === "VariableDeclaration"
+          ? new ScopeTrackerVariable(identifier, this.scopeIndexKey, parent)
+          : parent.type === "CatchClause"
+            ? new ScopeTrackerCatchParam(identifier, this.scopeIndexKey, parent)
+            : new ScopeTrackerFunctionParam(
+                identifier,
+                this.scopeIndexKey,
+                parent,
+              ),
+      );
+    }
+  }
+
+  protected processNodeEnter: ScopeTrackerProtected["processNodeEnter"] = (
+    node,
+  ) => {
+    switch (node.type) {
+      case "Program":
+      case "BlockStatement":
+      case "StaticBlock":
+        this.pushScope();
+        break;
+
+      case "FunctionDeclaration":
         // declare function name for named functions, skip for `export default`
         if (node.id?.name) {
-          this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey))
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerFunction(node, this.scopeIndexKey),
+          );
         }
-        this.pushScope()
+        this.pushScope();
         for (const param of node.params) {
-          this.declareFunctionParameter(param, node)
+          this.declareFunctionParameter(param, node);
         }
-        break
+        break;
 
-      case 'FunctionExpression':
+      case "FunctionExpression":
         // make the name of the function available only within the function
         // e.g. const foo = function bar() {  // bar is only available within the function body
-        this.pushScope()
+        this.pushScope();
         // can be undefined, for example, in class method definitions
         if (node.id?.name) {
-          this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey))
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerFunction(node, this.scopeIndexKey),
+          );
         }
 
-        this.pushScope()
+        this.pushScope();
         for (const param of node.params) {
-          this.declareFunctionParameter(param, node)
+          this.declareFunctionParameter(param, node);
         }
-        break
-      case 'ArrowFunctionExpression':
-        this.pushScope()
+        break;
+      case "ArrowFunctionExpression":
+        this.pushScope();
         for (const param of node.params) {
-          this.declareFunctionParameter(param, node)
+          this.declareFunctionParameter(param, node);
         }
-        break
+        break;
 
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         for (const decl of node.declarations) {
-          this.declarePattern(decl.id, node)
+          this.declarePattern(decl.id, node);
         }
-        break
+        break;
 
-      case 'ClassDeclaration':
+      case "ClassDeclaration":
         // declare class name for named classes, skip for `export default`
         if (node.id?.name) {
-          this.declareIdentifier(node.id.name, new ScopeTrackerIdentifier(node.id, this.scopeIndexKey))
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+          );
         }
-        break
+        break;
 
-      case 'ClassExpression':
+      case "ClassExpression":
         // make the name of the class available only within the class
         // e.g. const MyClass = class InternalClassName { // InternalClassName is only available within the class body
-        this.pushScope()
+        this.pushScope();
         if (node.id?.name) {
-          this.declareIdentifier(node.id.name, new ScopeTrackerIdentifier(node.id, this.scopeIndexKey))
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+          );
         }
-        break
+        break;
 
-      case 'ImportDeclaration':
+      case "ImportDeclaration":
         for (const specifier of node.specifiers) {
-          this.declareIdentifier(specifier.local.name, new ScopeTrackerImport(specifier, this.scopeIndexKey, node))
+          this.declareIdentifier(
+            specifier.local.name,
+            new ScopeTrackerImport(specifier, this.scopeIndexKey, node),
+          );
         }
-        break
+        break;
 
-      case 'CatchClause':
-        this.pushScope()
+      case "CatchClause":
+        this.pushScope();
         if (node.param) {
-          this.declarePattern(node.param, node)
+          this.declarePattern(node.param, node);
         }
-        break
+        break;
 
-      case 'ForStatement':
-      case 'ForOfStatement':
-      case 'ForInStatement':
+      case "ForStatement":
+      case "ForOfStatement":
+      case "ForInStatement":
         // make the variables defined in for loops available only within the loop
         // e.g. for (let i = 0; i < 10; i++) { // i is only available within the loop block scope
-        this.pushScope()
+        this.pushScope();
 
-        if (node.type === 'ForStatement' && node.init?.type === 'VariableDeclaration') {
+        if (
+          node.type === "ForStatement" &&
+          node.init?.type === "VariableDeclaration"
+        ) {
           for (const decl of node.init.declarations) {
-            this.declarePattern(decl.id, node.init)
+            this.declarePattern(decl.id, node.init);
           }
-        }
-        else if ((node.type === 'ForOfStatement' || node.type === 'ForInStatement') && node.left.type === 'VariableDeclaration') {
+        } else if (
+          (node.type === "ForOfStatement" || node.type === "ForInStatement") &&
+          node.left.type === "VariableDeclaration"
+        ) {
           for (const decl of node.left.declarations) {
-            this.declarePattern(decl.id, node.left)
+            this.declarePattern(decl.id, node.left);
           }
         }
-        break
+        break;
     }
-  }
+  };
 
-  protected processNodeLeave: ScopeTrackerProtected['processNodeLeave'] = (node) => {
+  protected processNodeLeave: ScopeTrackerProtected["processNodeLeave"] = (
+    node,
+  ) => {
     switch (node.type) {
-      case 'Program':
-      case 'BlockStatement':
-      case 'CatchClause':
-      case 'FunctionDeclaration':
-      case 'ArrowFunctionExpression':
-      case 'StaticBlock':
-      case 'ClassExpression':
-      case 'ForStatement':
-      case 'ForOfStatement':
-      case 'ForInStatement':
-        this.popScope()
-        break
-      case 'FunctionExpression':
-        this.popScope()
-        this.popScope()
-        break
+      case "Program":
+      case "BlockStatement":
+      case "CatchClause":
+      case "FunctionDeclaration":
+      case "ArrowFunctionExpression":
+      case "StaticBlock":
+      case "ClassExpression":
+      case "ForStatement":
+      case "ForOfStatement":
+      case "ForInStatement":
+        this.popScope();
+        break;
+      case "FunctionExpression":
+        this.popScope();
+        this.popScope();
+        break;
     }
-  }
+  };
 
   /**
    * Check if an identifier is declared in the current scope or any parent scope.
@@ -265,16 +306,16 @@ export class ScopeTracker {
    */
   isDeclared(name: string) {
     if (!this.scopeIndexKey) {
-      return this.scopes.get('')?.has(name) || false
+      return this.scopes.get("")?.has(name) || false;
     }
 
-    const indices = this.scopeIndexKey.split('-').map(Number)
+    const indices = this.scopeIndexKey.split("-").map(Number);
     for (let i = indices.length; i >= 0; i--) {
-      if (this.scopes.get(indices.slice(0, i).join('-'))?.has(name)) {
-        return true
+      if (this.scopes.get(indices.slice(0, i).join("-"))?.has(name)) {
+        return true;
       }
     }
-    return false
+    return false;
   }
 
   /**
@@ -283,24 +324,24 @@ export class ScopeTracker {
    */
   getDeclaration(name: string): ScopeTrackerNode | null {
     if (!this.scopeIndexKey) {
-      return this.scopes.get('')?.get(name) ?? null
+      return this.scopes.get("")?.get(name) ?? null;
     }
 
-    const indices = this.scopeIndexKey.split('-').map(Number)
+    const indices = this.scopeIndexKey.split("-").map(Number);
     for (let i = indices.length; i >= 0; i--) {
-      const node = this.scopes.get(indices.slice(0, i).join('-'))?.get(name)
+      const node = this.scopes.get(indices.slice(0, i).join("-"))?.get(name);
       if (node) {
-        return node
+        return node;
       }
     }
-    return null
+    return null;
   }
 
   /**
    * Get the current scope key.
    */
   getCurrentScope() {
-    return this.scopeIndexKey
+    return this.scopeIndexKey;
   }
 
   /**
@@ -316,7 +357,7 @@ export class ScopeTracker {
    * @returns `true` if the current scope is a child of the specified scope, `false` otherwise (also when they are the same)
    */
   isCurrentScopeUnder(scope: string) {
-    return isChildScope(this.scopeIndexKey, scope)
+    return isChildScope(this.scopeIndexKey, scope);
   }
 
   /**
@@ -326,132 +367,145 @@ export class ScopeTracker {
    * This is useful for second passes through the AST.
    */
   freeze() {
-    this.isFrozen = true
-    this.scopeIndexStack = []
-    this.updateScopeIndexKey()
+    this.isFrozen = true;
+    this.scopeIndexStack = [];
+    this.updateScopeIndexKey();
   }
 }
 
 function getPatternIdentifiers(pattern: Node) {
-  const identifiers: Identifier[] = []
+  const identifiers: Identifier[] = [];
 
   function collectIdentifiers(pattern: Node) {
     switch (pattern.type) {
-      case 'Identifier':
-        identifiers.push(pattern)
-        break
-      case 'AssignmentPattern':
-        collectIdentifiers(pattern.left)
-        break
-      case 'RestElement':
-        collectIdentifiers(pattern.argument)
-        break
-      case 'ArrayPattern':
+      case "Identifier":
+        identifiers.push(pattern);
+        break;
+      case "AssignmentPattern":
+        collectIdentifiers(pattern.left);
+        break;
+      case "RestElement":
+        collectIdentifiers(pattern.argument);
+        break;
+      case "ArrayPattern":
         for (const element of pattern.elements) {
           if (element) {
-            collectIdentifiers(element.type === 'RestElement' ? element.argument : element)
+            collectIdentifiers(
+              element.type === "RestElement" ? element.argument : element,
+            );
           }
         }
-        break
-      case 'ObjectPattern':
+        break;
+      case "ObjectPattern":
         for (const property of pattern.properties) {
-          collectIdentifiers(property.type === 'RestElement' ? property.argument : property.value)
+          collectIdentifiers(
+            property.type === "RestElement"
+              ? property.argument
+              : property.value,
+          );
         }
-        break
+        break;
     }
   }
 
-  collectIdentifiers(pattern)
+  collectIdentifiers(pattern);
 
-  return identifiers
+  return identifiers;
 }
 
 export function isBindingIdentifier(node: Node, parent: Node | null) {
-  if (!parent || node.type !== 'Identifier') {
-    return false
+  if (!parent || node.type !== "Identifier") {
+    return false;
   }
 
   switch (parent.type) {
-    case 'FunctionDeclaration':
-    case 'FunctionExpression':
-    case 'ArrowFunctionExpression':
+    case "FunctionDeclaration":
+    case "FunctionExpression":
+    case "ArrowFunctionExpression":
       // function name or parameters
-      if (parent.type !== 'ArrowFunctionExpression' && parent.id === node) {
-        return true
+      if (parent.type !== "ArrowFunctionExpression" && parent.id === node) {
+        return true;
       }
       if (parent.params.length) {
         for (const param of parent.params) {
-          const identifiers = getPatternIdentifiers(param)
+          const identifiers = getPatternIdentifiers(param);
           if (identifiers.includes(node)) {
-            return true
+            return true;
           }
         }
       }
-      return false
+      return false;
 
-    case 'ClassDeclaration':
-    case 'ClassExpression':
+    case "ClassDeclaration":
+    case "ClassExpression":
       // class name
-      return parent.id === node
+      return parent.id === node;
 
-    case 'MethodDefinition':
+    case "MethodDefinition":
       // class method name
-      return parent.key === node
+      return parent.key === node;
 
-    case 'PropertyDefinition':
+    case "PropertyDefinition":
       // class property name
-      return parent.key === node
+      return parent.key === node;
 
-    case 'VariableDeclarator':
+    case "VariableDeclarator":
       // variable name
-      return getPatternIdentifiers(parent.id).includes(node)
+      return getPatternIdentifiers(parent.id).includes(node);
 
-    case 'CatchClause':
+    case "CatchClause":
       // catch clause param
       if (!parent.param) {
-        return false
+        return false;
       }
-      return getPatternIdentifiers(parent.param).includes(node)
+      return getPatternIdentifiers(parent.param).includes(node);
 
-    case 'Property':
+    case "Property":
       // property key if not used as a shorthand
-      return parent.key === node && parent.value !== node
+      return parent.key === node && parent.value !== node;
 
-    case 'MemberExpression':
+    case "MemberExpression":
       // member expression properties
-      return parent.property === node
+      return parent.property === node;
   }
 
-  return false
+  return false;
 }
 
-export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctionExpression) {
+export function getUndeclaredIdentifiersInFunction(
+  node: Function | ArrowFunctionExpression,
+) {
   const scopeTracker = new ScopeTracker({
     preserveExitedScopes: true,
-  })
-  const undeclaredIdentifiers = new Set<string>()
+  });
+  const undeclaredIdentifiers = new Set<string>();
 
-  function isIdentifierUndeclared(node: Omit<IdentifierReference, 'typeAnnotation'>, parent: Node | null) {
-    return !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)
+  function isIdentifierUndeclared(
+    node: Omit<IdentifierReference, "typeAnnotation">,
+    parent: Node | null,
+  ) {
+    return (
+      !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)
+    );
   }
 
   // first pass to collect all declarations and hoist them
   walk(node, {
     scopeTracker,
-  })
+  });
 
-  scopeTracker.freeze()
+  scopeTracker.freeze();
 
   walk(node, {
     scopeTracker,
     enter(node, parent) {
-      if (node.type === 'Identifier' && isIdentifierUndeclared(node, parent)) {
-        undeclaredIdentifiers.add(node.name)
+      if (node.type === "Identifier" && isIdentifierUndeclared(node, parent)) {
+        undeclaredIdentifiers.add(node.name);
       }
     },
-  })
+  });
 
-  return Array.from(undeclaredIdentifiers)
+  return Array.from(undeclaredIdentifiers);
 }
 
 /**
@@ -467,149 +521,163 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
  * @returns true if scope A is a child of scope B, false otherwise (also when they are the same)
  */
 function isChildScope(a: string, b: string) {
-  return a.startsWith(b) && a.length > b.length
+  return a.startsWith(b) && a.length > b.length;
 }
 
 abstract class BaseNode<T extends Node = Node> {
-  abstract type: string
-  readonly scope: string
-  node: T
+  abstract type: string;
+  readonly scope: string;
+  node: T;
 
   constructor(node: T, scope: string) {
-    this.node = node
-    this.scope = scope
+    this.node = node;
+    this.scope = scope;
   }
 
   /**
    * The starting position of the entire node relevant for code transformation.
    * For instance, for a reference to a variable (ScopeTrackerVariable -> Identifier), this would refer to the start of the VariableDeclaration.
    */
-  abstract get start(): number
+  abstract get start(): number;
 
   /**
    * The ending position of the entire node relevant for code transformation.
    * For instance, for a reference to a variable (ScopeTrackerVariable -> Identifier), this would refer to the end of the VariableDeclaration.
    */
-  abstract get end(): number
+  abstract get end(): number;
 
   /**
    * Check if the node is defined under a specific scope.
    * @param scope
    */
   isUnderScope(scope: string) {
-    return isChildScope(this.scope, scope)
+    return isChildScope(this.scope, scope);
   }
 }
 
 class ScopeTrackerIdentifier extends BaseNode<Identifier> {
-  override type = 'Identifier' as const
+  override type = "Identifier" as const;
 
   get start() {
-    return this.node.start
+    return this.node.start;
   }
 
   get end() {
-    return this.node.end
+    return this.node.end;
   }
 }
 
 class ScopeTrackerFunctionParam extends BaseNode {
-  type = 'FunctionParam' as const
-  fnNode: Function | ArrowFunctionExpression
+  type = "FunctionParam" as const;
+  fnNode: Function | ArrowFunctionExpression;
 
-  constructor(node: Node, scope: string, fnNode: Function | ArrowFunctionExpression) {
-    super(node, scope)
-    this.fnNode = fnNode
+  constructor(
+    node: Node,
+    scope: string,
+    fnNode: Function | ArrowFunctionExpression,
+  ) {
+    super(node, scope);
+    this.fnNode = fnNode;
   }
 
   /**
    * @deprecated The representation of this position may change in the future. Use `.fnNode.start` instead for now.
    */
   get start() {
-    return this.fnNode.start
+    return this.fnNode.start;
   }
 
   /**
    * @deprecated The representation of this position may change in the future. Use `.fnNode.end` instead for now.
    */
   get end() {
-    return this.fnNode.end
+    return this.fnNode.end;
   }
 }
 
-class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpression> {
-  type = 'Function' as const
+class ScopeTrackerFunction extends BaseNode<
+  Function | ArrowFunctionExpression
+> {
+  type = "Function" as const;
 
   get start() {
-    return this.node.start
+    return this.node.start;
   }
 
   get end() {
-    return this.node.end
+    return this.node.end;
   }
 }
 
 class ScopeTrackerVariable extends BaseNode<Identifier> {
-  type = 'Variable' as const
-  variableNode: VariableDeclaration
+  type = "Variable" as const;
+  variableNode: VariableDeclaration;
 
-  constructor(node: Identifier, scope: string, variableNode: VariableDeclaration) {
-    super(node, scope)
-    this.variableNode = variableNode
+  constructor(
+    node: Identifier,
+    scope: string,
+    variableNode: VariableDeclaration,
+  ) {
+    super(node, scope);
+    this.variableNode = variableNode;
   }
 
   get start() {
-    return this.variableNode.start
+    return this.variableNode.start;
   }
 
   get end() {
-    return this.variableNode.end
+    return this.variableNode.end;
   }
 }
 
 class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
-  type = 'Import' as const
-  importNode: ImportDeclaration
+  type = "Import" as const;
+  importNode: ImportDeclaration;
 
-  constructor(node: ImportDeclarationSpecifier, scope: string, importNode: ImportDeclaration) {
-    super(node, scope)
-    this.importNode = importNode
+  constructor(
+    node: ImportDeclarationSpecifier,
+    scope: string,
+    importNode: ImportDeclaration,
+  ) {
+    super(node, scope);
+    this.importNode = importNode;
   }
 
   get start() {
-    return this.importNode.start
+    return this.importNode.start;
   }
 
   get end() {
-    return this.importNode.end
+    return this.importNode.end;
   }
 }
 
 class ScopeTrackerCatchParam extends BaseNode {
-  type = 'CatchParam' as const
-  catchNode: CatchClause
+  type = "CatchParam" as const;
+  catchNode: CatchClause;
 
   constructor(node: Node, scope: string, catchNode: CatchClause) {
-    super(node, scope)
-    this.catchNode = catchNode
+    super(node, scope);
+    this.catchNode = catchNode;
   }
 
   get start() {
-    return this.catchNode.start
+    return this.catchNode.start;
   }
 
   get end() {
-    return this.catchNode.end
+    return this.catchNode.end;
   }
 }
 
-export type ScopeTrackerNode
-  = | ScopeTrackerFunctionParam
-    | ScopeTrackerFunction
-    | ScopeTrackerVariable
-    | ScopeTrackerIdentifier
-    | ScopeTrackerImport
-    | ScopeTrackerCatchParam
+export type ScopeTrackerNode =
+  | ScopeTrackerFunctionParam
+  | ScopeTrackerFunction
+  | ScopeTrackerVariable
+  | ScopeTrackerIdentifier
+  | ScopeTrackerImport
+  | ScopeTrackerCatchParam;
 
 interface ScopeTrackerOptions {
   /**
@@ -617,5 +685,5 @@ interface ScopeTrackerOptions {
    * This is necessary when you want to do a pre-pass to collect all identifiers before walking, for example.
    * @default false
    */
-  preserveExitedScopes?: boolean
+  preserveExitedScopes?: boolean;
 }
