@@ -54,9 +54,11 @@
     "pre-commit": "npx lint-staged"
   },
   "lint-staged": {
+    "*.{js,ts,mjs,cjs}": [
+      "pnpm run fmt"
+    ],
     "*.{js,ts,mjs,cjs,json,.*rc}": [
-      "pnpm run oxfmt",
-      "pnpm run oxlint --fix"
+      "pnpm run lint --fix"
     ]
   }
 }
