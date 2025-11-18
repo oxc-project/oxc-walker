@@ -1,42 +1,42 @@
-import type { Node } from 'oxc-parser'
-import { describe, expect, it } from 'vitest'
-import { parseAndWalk, walk } from '../src'
+import type { Node } from "oxc-parser";
+import { describe, expect, it } from "vitest";
+import { parseAndWalk, walk } from "../src";
 
 function getNodeString(node: Node) {
-  const parts: string[] = [node.type]
-  if ('name' in node) {
-    parts.push(`${node.name}`)
+  const parts: string[] = [node.type];
+  if ("name" in node) {
+    parts.push(`${node.name}`);
   }
-  if ('value' in node) {
-    parts.push(`${node.value}`)
+  if ("value" in node) {
+    parts.push(`${node.value}`);
   }
-  if ('async' in node) {
-    parts.push(`async=${node.async}`)
+  if ("async" in node) {
+    parts.push(`async=${node.async}`);
   }
 
-  return parts.join(':')
+  return parts.join(":");
 }
 
-describe('oxc-walker', () => {
-  it('works', () => {
-    const nodes: Node[] = []
-    parseAndWalk('console.log("hello world")', 'test.js', {
+describe("oxc-walker", () => {
+  it("works", () => {
+    const nodes: Node[] = [];
+    parseAndWalk('console.log("hello world")', "test.js", {
       enter(node) {
-        if (node.type !== 'Program') {
-          this.skip()
-          return
+        if (node.type !== "Program") {
+          this.skip();
+          return;
         }
-        nodes.push(node)
+        nodes.push(node);
       },
       leave(node) {
-        if (node.type !== 'Program') {
-          return
+        if (node.type !== "Program") {
+          return;
         }
-        nodes.push(node)
+        nodes.push(node);
       },
-    })
-    const [first, last] = nodes
-    expect(first).toStrictEqual(last)
+    });
+    const [first, last] = nodes;
+    expect(first).toStrictEqual(last);
     expect(nodes).toMatchInlineSnapshot(`
       [
         {
@@ -136,14 +136,14 @@ describe('oxc-walker', () => {
           "type": "Program",
         },
       ]
-    `)
-  })
+    `);
+  });
 
-  it('handles simple enter callback', () => {
-    const walkedNodes: string[] = []
-    parseAndWalk('console.log("hello world")', 'test.js', (node) => {
-      walkedNodes.push(getNodeString(node))
-    })
+  it("handles simple enter callback", () => {
+    const walkedNodes: string[] = [];
+    parseAndWalk('console.log("hello world")', "test.js", (node) => {
+      walkedNodes.push(getNodeString(node));
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -155,10 +155,10 @@ describe('oxc-walker', () => {
         "Identifier:log",
         "Literal:hello world",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('walks in the correct order', () => {
+  it("walks in the correct order", () => {
     const code = `
     function foo<T>(arg: T, another: number): T {
       const [a, b] = [1, 2]
@@ -169,28 +169,36 @@ describe('oxc-walker', () => {
       return arg
     }
     foo<string>('test', 42)
-    `
-    const walkedNodes: string[] = []
-    const { program } = parseAndWalk(code, 'test.ts', {
+    `;
+    const walkedNodes: string[] = [];
+    const { program } = parseAndWalk(code, "test.ts", {
       enter(node, parent, { key, index }) {
-        walkedNodes.push(`enter:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : 'null'}|key:${key as string}|index:${index}`)
+        walkedNodes.push(
+          `enter:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : "null"}|key:${key as string}|index:${index}`,
+        );
       },
       leave(node, parent, { key, index }) {
-        walkedNodes.push(`leave:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : 'null'}|key:${key as string}|index:${index}`)
+        walkedNodes.push(
+          `leave:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : "null"}|key:${key as string}|index:${index}`,
+        );
       },
-    })
+    });
 
-    const reWalkedNodes: string[] = []
+    const reWalkedNodes: string[] = [];
     walk(program, {
       enter(node, parent, { key, index }) {
-        reWalkedNodes.push(`enter:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : 'null'}|key:${key as string}|index:${index}`)
+        reWalkedNodes.push(
+          `enter:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : "null"}|key:${key as string}|index:${index}`,
+        );
       },
       leave(node, parent, { key, index }) {
-        reWalkedNodes.push(`leave:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : 'null'}|key:${key as string}|index:${index}`)
+        reWalkedNodes.push(
+          `leave:${getNodeString(node)}|parent:${parent ? getNodeString(parent) : "null"}|key:${key as string}|index:${index}`,
+        );
       },
-    })
+    });
 
-    expect(walkedNodes).toStrictEqual(reWalkedNodes)
+    expect(walkedNodes).toStrictEqual(reWalkedNodes);
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
         "enter:Program|parent:null|key:null|index:null",
@@ -310,96 +318,98 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement|parent:Program|key:body|index:1",
         "leave:Program|parent:null|key:null|index:null",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('handles language detection', () => {
-    const nodes: Node[] = []
-    parseAndWalk('const render = () => <div></div>', 'test.jsx', {
+  it("handles language detection", () => {
+    const nodes: Node[] = [];
+    parseAndWalk("const render = () => <div></div>", "test.jsx", {
       enter(node) {
-        if (node.type !== 'Program') {
-          this.skip()
-          return
+        if (node.type !== "Program") {
+          this.skip();
+          return;
         }
-        nodes.push(node)
+        nodes.push(node);
       },
       leave(node) {
-        nodes.push(node)
+        nodes.push(node);
       },
-    })
-    expect('sourceType' in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(`"module"`)
-  })
+    });
+    expect(
+      "sourceType" in nodes[0]! ? nodes[0].sourceType : undefined,
+    ).toMatchInlineSnapshot(`"module"`);
+  });
 
-  it('handles language extensions in path', () => {
-    let didEncounterTypescript = false
-    parseAndWalk('const foo: number = 1', 'directory.js/file.ts', {
+  it("handles language extensions in path", () => {
+    let didEncounterTypescript = false;
+    parseAndWalk("const foo: number = 1", "directory.js/file.ts", {
       enter(node) {
-        if (node.type === 'TSTypeAnnotation') {
-          didEncounterTypescript = true
+        if (node.type === "TSTypeAnnotation") {
+          didEncounterTypescript = true;
         }
       },
-    })
-    expect(didEncounterTypescript).toBe(true)
-  })
+    });
+    expect(didEncounterTypescript).toBe(true);
+  });
 
-  it('accepts options for parsing', () => {
-    let didEncounterTypescript = false
-    parseAndWalk('const foo: number = 1', 'test.js', {
-      parseOptions: { lang: 'ts' },
+  it("accepts options for parsing", () => {
+    let didEncounterTypescript = false;
+    parseAndWalk("const foo: number = 1", "test.js", {
+      parseOptions: { lang: "ts" },
       enter(node) {
-        if (node.type === 'TSTypeAnnotation') {
-          didEncounterTypescript = true
+        if (node.type === "TSTypeAnnotation") {
+          didEncounterTypescript = true;
         }
       },
-    })
-    expect(didEncounterTypescript).toBe(true)
-  })
+    });
+    expect(didEncounterTypescript).toBe(true);
+  });
 
-  it('handles `null` literals', () => {
+  it("handles `null` literals", () => {
     const ast: Node = {
-      type: 'Program',
+      type: "Program",
       hashbang: null,
       start: 0,
       end: 8,
       body: [
         {
-          type: 'ExpressionStatement',
+          type: "ExpressionStatement",
           start: 0,
           end: 5,
           expression: {
-            type: 'Literal',
+            type: "Literal",
             start: 0,
             end: 4,
             value: null,
-            raw: 'null',
+            raw: "null",
           },
         },
         {
-          type: 'ExpressionStatement',
+          type: "ExpressionStatement",
           start: 6,
           end: 8,
           expression: {
-            type: 'Literal',
+            type: "Literal",
             start: 6,
             end: 7,
             value: 1,
-            raw: '1',
+            raw: "1",
           },
         },
       ],
-      sourceType: 'module',
-    }
+      sourceType: "module",
+    };
 
-    const walkedNodes: string[] = []
+    const walkedNodes: string[] = [];
 
     walk(ast, {
       enter(node) {
-        walkedNodes.push(`enter:${getNodeString(node)}`)
+        walkedNodes.push(`enter:${getNodeString(node)}`);
       },
       leave(node) {
-        walkedNodes.push(`leave:${getNodeString(node)}`)
+        walkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -414,25 +424,25 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('allows walk() reentrancy without context corruption', () => {
-    const walkedNodes: string[] = []
-    const innerWalkedNodes: string[] = []
+  it("allows walk() reentrancy without context corruption", () => {
+    const walkedNodes: string[] = [];
+    const innerWalkedNodes: string[] = [];
 
-    parseAndWalk('a + b', 'file.ts', (node) => {
-      if (node.type === 'ExpressionStatement') {
+    parseAndWalk("a + b", "file.ts", (node) => {
+      if (node.type === "ExpressionStatement") {
         walk(node, {
           enter() {
-            innerWalkedNodes.push(getNodeString(node))
-            this.skip()
+            innerWalkedNodes.push(getNodeString(node));
+            this.skip();
           },
-        })
+        });
       }
 
-      walkedNodes.push(getNodeString(node))
-    })
+      walkedNodes.push(getNodeString(node));
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -442,44 +452,44 @@ describe('oxc-walker', () => {
         "Identifier:a",
         "Identifier:b",
       ]
-    `)
+    `);
 
     expect(innerWalkedNodes).toMatchInlineSnapshot(`
       [
         "ExpressionStatement",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('handles JSXAttribute', () => {
-    parseAndWalk(`<input type="text" />`, 'test.jsx', (node) => {
-      if (node.type === 'JSXAttribute') {
-        expect(node.name.name).toBe('type')
+  it("handles JSXAttribute", () => {
+    parseAndWalk(`<input type="text" />`, "test.jsx", (node) => {
+      if (node.type === "JSXAttribute") {
+        expect(node.name.name).toBe("type");
       }
-    })
-  })
+    });
+  });
 
-  it('handles JSXText', () => {
-    parseAndWalk(`<div>hello world</div>`, 'test.jsx', (node) => {
-      if (node.type === 'JSXText') {
-        expect(node.value).toBe('hello world')
+  it("handles JSXText", () => {
+    parseAndWalk(`<div>hello world</div>`, "test.jsx", (node) => {
+      if (node.type === "JSXText") {
+        expect(node.value).toBe("hello world");
       }
-    })
-  })
+    });
+  });
 
-  it('supports skipping nodes and all their children', () => {
-    const walkedNodes: string[] = []
-    parseAndWalk('console.log("hello world")', 'test.js', {
+  it("supports skipping nodes and all their children", () => {
+    const walkedNodes: string[] = [];
+    parseAndWalk('console.log("hello world")', "test.js", {
       enter(node) {
-        walkedNodes.push(`enter:${getNodeString(node)}`)
-        if (node.type === 'CallExpression') {
-          this.skip()
+        walkedNodes.push(`enter:${getNodeString(node)}`);
+        if (node.type === "CallExpression") {
+          this.skip();
         }
       },
       leave(node) {
-        walkedNodes.push(`leave:${getNodeString(node)}`)
+        walkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -490,23 +500,23 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('handles multiple calls of `this.skip`', () => {
-    const walkedNodes: string[] = []
-    parseAndWalk('console.log("hello world")', 'test.js', {
+  it("handles multiple calls of `this.skip`", () => {
+    const walkedNodes: string[] = [];
+    parseAndWalk('console.log("hello world")', "test.js", {
       enter(node) {
-        walkedNodes.push(`enter:${node.type}`)
-        if (node.type === 'CallExpression') {
-          this.skip()
-          this.skip() // multiple calls to skip should be no-op
+        walkedNodes.push(`enter:${node.type}`);
+        if (node.type === "CallExpression") {
+          this.skip();
+          this.skip(); // multiple calls to skip should be no-op
         }
       },
       leave(node) {
-        walkedNodes.push(`leave:${node.type}`)
+        walkedNodes.push(`leave:${node.type}`);
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -517,33 +527,33 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('supports removing nodes', () => {
-    const walkedNodes: string[] = []
-    const { program } = parseAndWalk('console.log("hello world")', 'test.js', {
+  it("supports removing nodes", () => {
+    const walkedNodes: string[] = [];
+    const { program } = parseAndWalk('console.log("hello world")', "test.js", {
       enter(node) {
-        if (node.type === 'Literal') {
-          this.remove()
+        if (node.type === "Literal") {
+          this.remove();
         }
-        walkedNodes.push(`enter:${getNodeString(node)}`)
+        walkedNodes.push(`enter:${getNodeString(node)}`);
       },
       leave(node) {
-        walkedNodes.push(`leave:${getNodeString(node)}`)
+        walkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
-    const postRemoveWalkedNodes: string[] = []
+    const postRemoveWalkedNodes: string[] = [];
 
     walk(program, {
       enter(node) {
-        postRemoveWalkedNodes.push(`enter:${getNodeString(node)}`)
+        postRemoveWalkedNodes.push(`enter:${getNodeString(node)}`);
       },
       leave(node) {
-        postRemoveWalkedNodes.push(`leave:${getNodeString(node)}`)
+        postRemoveWalkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -562,7 +572,7 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
+    `);
 
     expect(postRemoveWalkedNodes).toMatchInlineSnapshot(`
       [
@@ -579,25 +589,28 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('removes nodes from arrays and reports indices visited', () => {
+  it("removes nodes from arrays and reports indices visited", () => {
     const code = `
     let a, b, c
-    `
+    `;
 
-    const walkedNodes: string[] = []
-    const { program } = parseAndWalk(code, 'test.ts', {
+    const walkedNodes: string[] = [];
+    const { program } = parseAndWalk(code, "test.ts", {
       enter(node, _, { index }) {
-        if (node.type === 'VariableDeclarator') {
-          walkedNodes.push(`enter:${getNodeString(node)}|index:${index}`)
-          if (node.id.type === 'Identifier' && ['a', 'b'].includes(node.id.name)) {
-            this.remove()
+        if (node.type === "VariableDeclarator") {
+          walkedNodes.push(`enter:${getNodeString(node)}|index:${index}`);
+          if (
+            node.id.type === "Identifier" &&
+            ["a", "b"].includes(node.id.name)
+          ) {
+            this.remove();
           }
         }
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -605,7 +618,7 @@ describe('oxc-walker', () => {
         "enter:VariableDeclarator|index:0",
         "enter:VariableDeclarator|index:0",
       ]
-    `)
+    `);
     expect(program).toMatchInlineSnapshot(`
       {
         "body": [
@@ -641,36 +654,36 @@ describe('oxc-walker', () => {
         "start": 5,
         "type": "Program",
       }
-    `)
-  })
+    `);
+  });
 
-  it('supports replacing nodes', () => {
-    const walkedNodes: string[] = []
-    const { program } = parseAndWalk('console.log("hello world")', 'test.js', {
+  it("supports replacing nodes", () => {
+    const walkedNodes: string[] = [];
+    const { program } = parseAndWalk('console.log("hello world")', "test.js", {
       enter(node) {
-        if (node.type === 'Literal') {
+        if (node.type === "Literal") {
           this.replace({
             ...node,
-            value: 'replaced',
-          })
+            value: "replaced",
+          });
         }
-        walkedNodes.push(`enter:${getNodeString(node)}`)
+        walkedNodes.push(`enter:${getNodeString(node)}`);
       },
       leave(node) {
-        walkedNodes.push(`leave:${getNodeString(node)}`)
+        walkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
-    const postReplaceWalkedNodes: string[] = []
+    const postReplaceWalkedNodes: string[] = [];
 
     walk(program, {
       enter(node) {
-        postReplaceWalkedNodes.push(`enter:${getNodeString(node)}`)
+        postReplaceWalkedNodes.push(`enter:${getNodeString(node)}`);
       },
       leave(node) {
-        postReplaceWalkedNodes.push(`leave:${getNodeString(node)}`)
+        postReplaceWalkedNodes.push(`leave:${getNodeString(node)}`);
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -689,7 +702,7 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
+    `);
 
     expect(postReplaceWalkedNodes).toMatchInlineSnapshot(`
       [
@@ -708,60 +721,66 @@ describe('oxc-walker', () => {
         "leave:ExpressionStatement",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('replaces a top-level node and returns it', () => {
-    const ast: Node = { type: 'Identifier', name: 'answer', start: 0, end: 6 }
-    const fortyTwo: Node = { type: 'Literal', value: 42, raw: '42', start: 0, end: 2 }
+  it("replaces a top-level node and returns it", () => {
+    const ast: Node = { type: "Identifier", name: "answer", start: 0, end: 6 };
+    const fortyTwo: Node = {
+      type: "Literal",
+      value: 42,
+      raw: "42",
+      start: 0,
+      end: 2,
+    };
 
     const newAst = walk(ast, {
       enter(node) {
-        if (node.type === 'Identifier' && node.name === 'answer') {
-          this.replace(fortyTwo)
+        if (node.type === "Identifier" && node.name === "answer") {
+          this.replace(fortyTwo);
         }
       },
-    })
+    });
 
-    expect(newAst).toBe(fortyTwo)
-  })
+    expect(newAst).toBe(fortyTwo);
+  });
 
-  it('walks the children of the newly replaced node', () => {
-    const walkedNodes: string[] = []
-    parseAndWalk('function (arg1, arg2) {}', 'test.js', {
+  it("walks the children of the newly replaced node", () => {
+    const walkedNodes: string[] = [];
+    parseAndWalk("function (arg1, arg2) {}", "test.js", {
       enter(node, parent) {
-        if (node.type === 'FunctionDeclaration') {
+        if (node.type === "FunctionDeclaration") {
           this.replace({
-            type: 'FunctionDeclaration',
+            type: "FunctionDeclaration",
             id: null,
             generator: false,
             async: true,
             params: [
-              { type: 'Identifier', name: 'rep1', start: 10, end: 14 },
-              { type: 'Identifier', name: 'rep2', start: 16, end: 20 },
+              { type: "Identifier", name: "rep1", start: 10, end: 14 },
+              { type: "Identifier", name: "rep2", start: 16, end: 20 },
             ],
-            body: { type: 'BlockStatement', body: [], start: 22, end: 24 },
+            body: { type: "BlockStatement", body: [], start: 22, end: 24 },
             expression: false,
             start: 0,
             end: 24,
-          })
+          });
         }
-        walkedNodes.push(`enter:${getNodeString(node)}`)
+        walkedNodes.push(`enter:${getNodeString(node)}`);
 
-        if (parent && parent.type === 'FunctionDeclaration') {
+        if (parent && parent.type === "FunctionDeclaration") {
           // expect that the parent is the replaced node
-          expect(parent.async).toBe(true)
+          expect(parent.async).toBe(true);
         }
       },
       leave(node, parent) {
-        walkedNodes.push(`leave:${getNodeString(node)}`)
+        walkedNodes.push(`leave:${getNodeString(node)}`);
 
-        if (parent && parent.type === 'FunctionDeclaration') {
+        if (parent && parent.type === "FunctionDeclaration") {
           // expect that the parent is the replaced node
-          expect(parent.async).toBe(true)
+          expect(parent.async).toBe(true);
         }
       },
-    })
+    });
 
     // ensure that leave is still called with the original old node (async: false)
     expect(walkedNodes).toMatchInlineSnapshot(`
@@ -777,35 +796,39 @@ describe('oxc-walker', () => {
         "leave:FunctionDeclaration:async=false",
         "leave:Program",
       ]
-    `)
-  })
+    `);
+  });
 
-  it('uses last result of `this.replace` when replacing nodes multiple times', () => {
-    const { program: ast } = parseAndWalk('console.log("hello world")', 'test.js', {
-      enter(node) {
-        if (node.type === 'Literal') {
-          this.replace({
-            ...node,
-            value: 'first',
-          })
-          this.replace({
-            ...node,
-            value: 'second',
-          })
-          this.replace({
-            ...node,
-            value: 'final',
-          })
-        }
+  it("uses last result of `this.replace` when replacing nodes multiple times", () => {
+    const { program: ast } = parseAndWalk(
+      'console.log("hello world")',
+      "test.js",
+      {
+        enter(node) {
+          if (node.type === "Literal") {
+            this.replace({
+              ...node,
+              value: "first",
+            });
+            this.replace({
+              ...node,
+              value: "second",
+            });
+            this.replace({
+              ...node,
+              value: "final",
+            });
+          }
+        },
       },
-    })
+    );
 
-    const walkedNodes: string[] = []
+    const walkedNodes: string[] = [];
     walk(ast, {
       enter(node) {
-        walkedNodes.push(getNodeString(node))
+        walkedNodes.push(getNodeString(node));
       },
-    })
+    });
 
     expect(walkedNodes).toMatchInlineSnapshot(`
       [
@@ -817,6 +840,6 @@ describe('oxc-walker', () => {
         "Identifier:log",
         "Literal:final",
       ]
-    `)
-  })
-})
+    `);
+  });
+});

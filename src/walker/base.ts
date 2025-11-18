@@ -1,5 +1,5 @@
-import type { Node, Program } from 'oxc-parser'
-import type { ScopeTracker, ScopeTrackerProtected } from '../scope-tracker'
+import type { Node, Program } from "oxc-parser";
+import type { ScopeTracker, ScopeTrackerProtected } from "../scope-tracker";
 
 export interface WalkerCallbackContext {
   /**
@@ -17,7 +17,7 @@ export interface WalkerCallbackContext {
    *     // ...
    *   },
    */
-  key: string | number | symbol | null | undefined
+  key: string | number | symbol | null | undefined;
   /**
    * The zero-based index of the current node within its parent's children array, if applicable.
    * For instance, when processing a `VariableDeclarator` node,
@@ -36,11 +36,11 @@ export interface WalkerCallbackContext {
    *     // ...
    *   },
    */
-  index: number | null
+  index: number | null;
   /**
    * The full Abstract Syntax Tree (AST) that is being walked, starting from the root node.
    */
-  ast: Program | Node
+  ast: Program | Node;
 }
 
 interface WalkerThisContextLeave {
@@ -50,7 +50,7 @@ interface WalkerThisContextLeave {
    * - The `ScopeTracker` currently does not support node removal
    * @see ScopeTracker
    */
-  remove: () => void
+  remove: () => void;
   /**
    * Replace the current node with another node.
    * After replacement, the walker will continue with the next sibling of the replaced node.
@@ -61,21 +61,21 @@ interface WalkerThisContextLeave {
    * - The `ScopeTracker` currently does not support node replacement
    * @see ScopeTracker
    */
-  replace: (node: Node) => void
+  replace: (node: Node) => void;
 }
 
 interface WalkerThisContextEnter extends WalkerThisContextLeave {
   /**
    * Skip traversing the child nodes of the current node.
    */
-  skip: () => void
+  skip: () => void;
   /**
    * Remove the current node and all of its children from the AST.
    * @remarks
    * - The `ScopeTracker` currently does not support node removal
    * @see ScopeTracker
    */
-  remove: () => void
+  remove: () => void;
   /**
    * Replace the current node with another node.
    * After replacement, the walker will continue to traverse the children of the new node.
@@ -86,88 +86,104 @@ interface WalkerThisContextEnter extends WalkerThisContextLeave {
    * @see this.skip
    * @see ScopeTracker
    */
-  replace: (node: Node) => void
+  replace: (node: Node) => void;
 }
 
-type WalkerCallback<T extends WalkerThisContextLeave> = (this: T, node: Node, parent: Node | null, ctx: WalkerCallbackContext) => void
+type WalkerCallback<T extends WalkerThisContextLeave> = (
+  this: T,
+  node: Node,
+  parent: Node | null,
+  ctx: WalkerCallbackContext,
+) => void;
 
-export type WalkerEnter = WalkerCallback<WalkerThisContextEnter>
-export type WalkerLeave = WalkerCallback<WalkerThisContextLeave>
+export type WalkerEnter = WalkerCallback<WalkerThisContextEnter>;
+export type WalkerLeave = WalkerCallback<WalkerThisContextLeave>;
 
 export interface WalkerOptions {
-  scopeTracker: ScopeTracker
+  scopeTracker: ScopeTracker;
 }
 
 export class WalkerBase {
-  protected scopeTracker: ScopeTracker & ScopeTrackerProtected | undefined
-  protected enter: WalkerEnter | undefined
-  protected leave: WalkerLeave | undefined
+  protected scopeTracker: (ScopeTracker & ScopeTrackerProtected) | undefined;
+  protected enter: WalkerEnter | undefined;
+  protected leave: WalkerLeave | undefined;
 
   protected contextEnter: WalkerThisContextEnter = {
     skip: () => {
-      this._skip = true
+      this._skip = true;
     },
     remove: () => {
-      this._remove = true
+      this._remove = true;
     },
     replace: (node: Node) => {
-      this._replacement = node
+      this._replacement = node;
     },
-  }
+  };
 
   protected contextLeave: WalkerThisContextLeave = {
     remove: this.contextEnter.remove,
     replace: this.contextEnter.replace,
-  }
+  };
 
-  protected _skip = false
-  protected _remove = false
-  protected _replacement: Node | null = null
+  protected _skip = false;
+  protected _remove = false;
+  protected _replacement: Node | null = null;
 
   constructor(
     handler: {
-      enter?: WalkerEnter
-      leave?: WalkerLeave
+      enter?: WalkerEnter;
+      leave?: WalkerLeave;
     },
     options?: Partial<WalkerOptions>,
   ) {
-    this.enter = handler.enter
-    this.leave = handler.leave
-    this.scopeTracker = options?.scopeTracker as (ScopeTracker & ScopeTrackerProtected)
+    this.enter = handler.enter;
+    this.leave = handler.leave;
+    this.scopeTracker = options?.scopeTracker as ScopeTracker &
+      ScopeTrackerProtected;
   }
 
-  protected replace<T extends Node>(parent: T | null, key: keyof T | null, index: number | null, node: Node) {
+  protected replace<T extends Node>(
+    parent: T | null,
+    key: keyof T | null,
+    index: number | null,
+    node: Node,
+  ) {
     if (!parent || key === null) {
-      return
+      return;
     }
     if (index !== null) {
-      (parent[key] as Array<unknown>)[index] = node
-    }
-    else {
-      parent[key] = node as T[keyof T]
+      (parent[key] as Array<unknown>)[index] = node;
+    } else {
+      parent[key] = node as T[keyof T];
     }
   }
 
-  protected insert<T extends Node>(parent: T | null, key: keyof T | null, index: number | null, node: Node) {
-    if (!parent || key === null)
-      return
+  protected insert<T extends Node>(
+    parent: T | null,
+    key: keyof T | null,
+    index: number | null,
+    node: Node,
+  ) {
+    if (!parent || key === null) return;
     if (index !== null) {
-      (parent[key] as Array<unknown>).splice(index, 0, node)
-    }
-    else {
-      parent[key] = node as T[keyof T]
+      (parent[key] as Array<unknown>).splice(index, 0, node);
+    } else {
+      parent[key] = node as T[keyof T];
     }
   }
 
-  protected remove<T extends Node>(parent: T | null, key: keyof T | null, index: number | null) {
+  protected remove<T extends Node>(
+    parent: T | null,
+    key: keyof T | null,
+    index: number | null,
+  ) {
     if (!parent || key === null) {
-      return
+      return;
     }
     if (index !== null) {
-      (parent[key] as Array<unknown>).splice(index, 1)
-    }
-    else {
-      delete parent[key]
+      (parent[key] as Array<unknown>).splice(index, 1);
+    } else {
+      delete parent[key];
     }
   }
 }
