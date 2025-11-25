@@ -1,11 +1,6 @@
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vitest";
-import {
-  getUndeclaredIdentifiersInFunction,
-  parseAndWalk,
-  ScopeTracker,
-  walk,
-} from "../src";
+import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from "../src";
 
 function getNodeString(node: Node) {
   const parts: string[] = [node.type];
@@ -305,9 +300,7 @@ describe("scope tracker", () => {
 
     const blockA = scopeTracker.getDeclarationFromScope("a", "0");
     expect(blockA?.type).toEqual("Variable");
-    expect(blockA?.type === "Variable" && blockA.variableNode.type).toEqual(
-      "VariableDeclaration",
-    );
+    expect(blockA?.type === "Variable" && blockA.variableNode.type).toEqual("VariableDeclaration");
 
     // check that the two `a` variables are different
     expect(globalA?.type === "Variable" && globalA.variableNode).not.toBe(
@@ -628,9 +621,7 @@ describe("scope tracker", () => {
         ) {
           this.skip();
           const declaration = scopeTracker.getDeclaration(node.callee.name);
-          walkedNodes.push(
-            `${node.callee.name} -> ${declaration?.type || "not found"}`,
-          );
+          walkedNodes.push(`${node.callee.name} -> ${declaration?.type || "not found"}`);
           return;
         }
 

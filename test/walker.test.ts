@@ -335,9 +335,9 @@ describe("oxc-walker", () => {
         nodes.push(node);
       },
     });
-    expect(
-      "sourceType" in nodes[0]! ? nodes[0].sourceType : undefined,
-    ).toMatchInlineSnapshot(`"module"`);
+    expect("sourceType" in nodes[0]! ? nodes[0].sourceType : undefined).toMatchInlineSnapshot(
+      `"module"`,
+    );
   });
 
   it("handles language extensions in path", () => {
@@ -602,10 +602,7 @@ describe("oxc-walker", () => {
       enter(node, _, { index }) {
         if (node.type === "VariableDeclarator") {
           walkedNodes.push(`enter:${getNodeString(node)}|index:${index}`);
-          if (
-            node.id.type === "Identifier" &&
-            ["a", "b"].includes(node.id.name)
-          ) {
+          if (node.id.type === "Identifier" && ["a", "b"].includes(node.id.name)) {
             this.remove();
           }
         }
@@ -800,28 +797,24 @@ describe("oxc-walker", () => {
   });
 
   it("uses last result of `this.replace` when replacing nodes multiple times", () => {
-    const { program: ast } = parseAndWalk(
-      'console.log("hello world")',
-      "test.js",
-      {
-        enter(node) {
-          if (node.type === "Literal") {
-            this.replace({
-              ...node,
-              value: "first",
-            });
-            this.replace({
-              ...node,
-              value: "second",
-            });
-            this.replace({
-              ...node,
-              value: "final",
-            });
-          }
-        },
+    const { program: ast } = parseAndWalk('console.log("hello world")', "test.js", {
+      enter(node) {
+        if (node.type === "Literal") {
+          this.replace({
+            ...node,
+            value: "first",
+          });
+          this.replace({
+            ...node,
+            value: "second",
+          });
+          this.replace({
+            ...node,
+            value: "final",
+          });
+        }
       },
-    );
+    });
 
     const walkedNodes: string[] = [];
     walk(ast, {

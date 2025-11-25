@@ -1,11 +1,6 @@
 import type { Node } from "oxc-parser";
 import type { ScopeTracker } from "../scope-tracker";
-import type {
-  WalkerCallbackContext,
-  WalkerEnter,
-  WalkerLeave,
-  WalkerOptions,
-} from "./base";
+import type { WalkerCallbackContext, WalkerEnter, WalkerLeave, WalkerOptions } from "./base";
 import { isNode } from "../utils";
 import { WalkerBase } from "./base";
 
@@ -41,12 +36,7 @@ export class WalkerSync extends WalkerBase {
   }
 
   traverse(input: Node): Node | null;
-  traverse(
-    input: any,
-    key?: keyof Node,
-    index?: number | null,
-    parent?: Node | null,
-  ): Node | null {
+  traverse(input: any, key?: keyof Node, index?: number | null, parent?: Node | null): Node | null {
     const ast = input;
     const ctx: WalkerCallbackContext = { key: null, index: index ?? null, ast };
     const hasScopeTracker = !!this.scopeTracker;
@@ -113,15 +103,7 @@ export class WalkerSync extends WalkerBase {
             for (let i = 0; i < node.length; i++) {
               const child = node[i];
               if (isNode(child)) {
-                if (
-                  _walk(
-                    child,
-                    currentNode,
-                    k as keyof Node,
-                    i,
-                    skipChildren,
-                  ) === null
-                ) {
+                if (_walk(child, currentNode, k as keyof Node, i, skipChildren) === null) {
                   // removed a node, adjust index not to skip next node
                   i--;
                 }
