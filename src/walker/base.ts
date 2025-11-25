@@ -138,8 +138,7 @@ export class WalkerBase {
   ) {
     this.enter = handler.enter;
     this.leave = handler.leave;
-    this.scopeTracker = options?.scopeTracker as ScopeTracker &
-      ScopeTrackerProtected;
+    this.scopeTracker = options?.scopeTracker as ScopeTracker & ScopeTrackerProtected;
   }
 
   protected replace<T extends Node>(
@@ -172,11 +171,7 @@ export class WalkerBase {
     }
   }
 
-  protected remove<T extends Node>(
-    parent: T | null,
-    key: keyof T | null,
-    index: number | null,
-  ) {
+  protected remove<T extends Node>(parent: T | null, key: keyof T | null, index: number | null) {
     if (!parent || key === null) {
       return;
     }

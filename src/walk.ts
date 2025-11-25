@@ -85,8 +85,7 @@ export function parseAndWalk(
   sourceFilename: string,
   arg3: Partial<ParseAndWalkOptions> | WalkerEnter,
 ) {
-  const lang = sourceFilename?.match(LANG_RE)?.groups
-    ?.lang as ParserOptions["lang"];
+  const lang = sourceFilename?.match(LANG_RE)?.groups?.lang as ParserOptions["lang"];
   const { parseOptions: _parseOptions = {}, ...options } =
     typeof arg3 === "function" ? { enter: arg3 } : arg3;
   const parseOptions: ParserOptions = {

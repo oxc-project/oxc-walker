@@ -113,10 +113,7 @@ export class ScopeTracker {
     scope.set(name, data);
   }
 
-  protected declareFunctionParameter(
-    param: Node,
-    fn: Function | ArrowFunctionExpression,
-  ) {
+  protected declareFunctionParameter(param: Node, fn: Function | ArrowFunctionExpression) {
     if (this.isFrozen) {
       return;
     }
@@ -132,11 +129,7 @@ export class ScopeTracker {
 
   protected declarePattern(
     pattern: Node,
-    parent:
-      | VariableDeclaration
-      | ArrowFunctionExpression
-      | CatchClause
-      | Function,
+    parent: VariableDeclaration | ArrowFunctionExpression | CatchClause | Function,
   ) {
     if (this.isFrozen) {
       return;
@@ -150,18 +143,12 @@ export class ScopeTracker {
           ? new ScopeTrackerVariable(identifier, this.scopeIndexKey, parent)
           : parent.type === "CatchClause"
             ? new ScopeTrackerCatchParam(identifier, this.scopeIndexKey, parent)
-            : new ScopeTrackerFunctionParam(
-                identifier,
-                this.scopeIndexKey,
-                parent,
-              ),
+            : new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, parent),
       );
     }
   }
 
-  protected processNodeEnter: ScopeTrackerProtected["processNodeEnter"] = (
-    node,
-  ) => {
+  protected processNodeEnter: ScopeTrackerProtected["processNodeEnter"] = (node) => {
     switch (node.type) {
       case "Program":
       case "BlockStatement":
@@ -172,10 +159,7 @@ export class ScopeTracker {
       case "FunctionDeclaration":
         // declare function name for named functions, skip for `export default`
         if (node.id?.name) {
-          this.declareIdentifier(
-            node.id.name,
-            new ScopeTrackerFunction(node, this.scopeIndexKey),
-          );
+          this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey));
         }
         this.pushScope();
         for (const param of node.params) {
@@ -189,10 +173,7 @@ export class ScopeTracker {
         this.pushScope();
         // can be undefined, for example, in class method definitions
         if (node.id?.name) {
-          this.declareIdentifier(
-            node.id.name,
-            new ScopeTrackerFunction(node, this.scopeIndexKey),
-          );
+          this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey));
         }
 
         this.pushScope();
@@ -258,10 +239,7 @@ export class ScopeTracker {
         // e.g. for (let i = 0; i < 10; i++) { // i is only available within the loop block scope
         this.pushScope();
 
-        if (
-          node.type === "ForStatement" &&
-          node.init?.type === "VariableDeclaration"
-        ) {
+        if (node.type === "ForStatement" && node.init?.type === "VariableDeclaration") {
           for (const decl of node.init.declarations) {
             this.declarePattern(decl.id, node.init);
           }
@@ -277,9 +255,7 @@ export class ScopeTracker {
     }
   };
 
-  protected processNodeLeave: ScopeTrackerProtected["processNodeLeave"] = (
-    node,
-  ) => {
+  protected processNodeLeave: ScopeTrackerProtected["processNodeLeave"] = (node) => {
     switch (node.type) {
       case "Program":
       case "BlockStatement":
@@ -390,19 +366,13 @@ function getPatternIdentifiers(pattern: Node) {
       case "ArrayPattern":
         for (const element of pattern.elements) {
           if (element) {
-            collectIdentifiers(
-              element.type === "RestElement" ? element.argument : element,
-            );
+            collectIdentifiers(element.type === "RestElement" ? element.argument : element);
           }
         }
         break;
       case "ObjectPattern":
         for (const property of pattern.properties) {
-          collectIdentifiers(
-            property.type === "RestElement"
-              ? property.argument
-              : property.value,
-          );
+          collectIdentifiers(property.type === "RestElement" ? property.argument : property.value);
         }
         break;
     }
@@ -472,9 +442,7 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
   return false;
 }
 
-export function getUndeclaredIdentifiersInFunction(
-  node: Function | ArrowFunctionExpression,
-) {
+export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctionExpression) {
   const scopeTracker = new ScopeTracker({
     preserveExitedScopes: true,
   });
@@ -484,9 +452,7 @@ export function getUndeclaredIdentifiersInFunction(
     node: Omit<IdentifierReference, "typeAnnotation">,
     parent: Node | null,
   ) {
-    return (
-      !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)
-    );
+    return !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name);
   }
 
   // first pass to collect all declarations and hoist them
@@ -571,11 +537,7 @@ class ScopeTrackerFunctionParam extends BaseNode {
   type = "FunctionParam" as const;
   fnNode: Function | ArrowFunctionExpression;
 
-  constructor(
-    node: Node,
-    scope: string,
-    fnNode: Function | ArrowFunctionExpression,
-  ) {
+  constructor(node: Node, scope: string, fnNode: Function | ArrowFunctionExpression) {
     super(node, scope);
     this.fnNode = fnNode;
   }
@@ -595,9 +557,7 @@ class ScopeTrackerFunctionParam extends BaseNode {
   }
 }
 
-class ScopeTrackerFunction extends BaseNode<
-  Function | ArrowFunctionExpression
-> {
+class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpression> {
   type = "Function" as const;
 
   get start() {
@@ -613,11 +573,7 @@ class ScopeTrackerVariable extends BaseNode<Identifier> {
   type = "Variable" as const;
   variableNode: VariableDeclaration;
 
-  constructor(
-    node: Identifier,
-    scope: string,
-    variableNode: VariableDeclaration,
-  ) {
+  constructor(node: Identifier, scope: string, variableNode: VariableDeclaration) {
     super(node, scope);
     this.variableNode = variableNode;
   }
@@ -635,11 +591,7 @@ class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
   type = "Import" as const;
   importNode: ImportDeclaration;
 
-  constructor(
-    node: ImportDeclarationSpecifier,
-    scope: string,
-    importNode: ImportDeclaration,
-  ) {
+  constructor(node: ImportDeclarationSpecifier, scope: string, importNode: ImportDeclaration) {
     super(node, scope);
     this.importNode = importNode;
   }
