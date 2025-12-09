@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2022",
-    "lib": [
-      "es2022"
-    ],
+    "lib": ["es2022"],
     "moduleDetection": "force",
     "module": "preserve",
     "resolveJsonModule": true,
@@ -16,11 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
-  "include": [
-    "src",
-    "test",
-    "playground"
-  ]
+  "include": ["src", "test", "playground"],
 }
