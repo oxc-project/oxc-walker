@@ -20,6 +20,7 @@ pnpm install oxc-walker
 ```
 
 ### Walk a parsed AST
+
 ```ts
 import { parseSync } from 'oxc-parser'
 import { walk } from 'oxc-walker'
@@ -46,7 +47,9 @@ parseAndWalk('const x = 1', 'example.js', (node, parent, ctx) => {
 ## ⚙️ API
 
 ### `walk(ast, options)`
+
 Walk an AST.
+
 ```ts
 // options
 interface WalkOptions {
@@ -81,16 +84,19 @@ interface CallbackContext {
 ```
 
 #### `this.skip()`
+
 When called inside an `enter` callback, prevents the node's children from being walked.
 It is not available in `leave`.
 
 #### `this.replace(newNode)`
+
 Replaces the current node with `newNode`. When called inside `enter`, the **new node's children** will be walked.
 The leave callback will still be called with the original node.
 
 > ⚠️ When a `ScopeTracker` is provided, calling `this.replace()` will not update its declarations.
 
 #### `this.remove()`
+
 Removes the current node from its parent. When called inside `enter`, the removed node's children
 will not be walked.
 
@@ -99,9 +105,11 @@ _This has a higher precedence than `this.replace()`, so if both are called, the 
 > ⚠️ When a `ScopeTracker` is provided, calling `this.remove()` will not update its declarations.
 
 ### `parseAndWalk(source, filename, callback, options?)`
+
 Parse the source code using `oxc-parser`, walk the resulting AST and return the `ParseResult`.
 
 Overloads:
+
 - `parseAndWalk(code, filename, enter)`
 - `parseAndWalk(code, filename, options)`
 
@@ -127,6 +135,7 @@ interface ParseAndWalkOptions {
 ```
 
 ### `ScopeTracker`
+
 A utility to track scopes and declarations while walking an AST. It is designed to be used with the `walk`
 function from this library.
 
@@ -141,6 +150,7 @@ interface ScopeTrackerOptions {
 ```
 
 #### Example usage:
+
 ```ts
 import { parseAndWalk, ScopeTracker } from 'oxc-walker'
 
@@ -194,6 +204,7 @@ walk(program, {
 ```
 
 #### Helpers:
+
 - `scopeTracker.isDeclared(name: string): boolean` - check if an identifier is declared in reference to the current scope
 - `scopeTracker.getDeclaration(name: string): ScopeTrackerNode | null` - get the scope tracker node with metadata for a given identifier name in reference to the current scope
 - `scopeTracker.freeze()` - freeze the scope tracker to prevent further modifications and prepare for second pass (useful for multi-pass analysis)
