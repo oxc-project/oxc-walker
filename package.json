@@ -35,7 +35,7 @@
     "magic-regexp": "^0.10.0"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
+    "@types/node": "25.0.0",
     "@vitest/coverage-v8": "4.0.15",
     "knip": "^5.69.1",
     "lint-staged": "16.2.7",
