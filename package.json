@@ -1,16 +1,15 @@
 {
   "name": "oxc-walker",
-  "type": "module",
   "version": "0.6.0",
-  "packageManager": "pnpm@10.25.0",
   "description": "",
-  "license": "MIT",
   "repository": "oxc-project/oxc-walker",
+  "license": "MIT",
   "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.mjs",
   "exports": {
     ".": "./dist/index.mjs"
   },
-  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
@@ -28,28 +27,6 @@
     "test:unit": "vitest",
     "test:types": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "oxc-parser": ">=0.98.0"
-  },
-  "dependencies": {
-    "magic-regexp": "^0.10.0"
-  },
-  "devDependencies": {
-    "@types/node": "24.10.3",
-    "@vitest/coverage-v8": "4.0.15",
-    "knip": "^5.69.1",
-    "lint-staged": "16.2.7",
-    "oxc-parser": "0.103.0",
-    "oxfmt": "^0.17.0",
-    "oxlint": "^1.29.0",
-    "simple-git-hooks": "2.13.1",
-    "typescript": "5.9.3",
-    "unbuild": "3.6.1",
-    "vitest": "4.0.15"
-  },
-  "resolutions": {
-    "oxc-walker": "link:."
-  },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"
   },
@@ -60,5 +37,28 @@
     "*.{js,ts,mjs,cjs,json,.*rc}": [
       "pnpm run lint --fix"
     ]
-  }
+  },
+  "resolutions": {
+    "oxc-walker": "link:."
+  },
+  "dependencies": {
+    "magic-regexp": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.3",
+    "@vitest/coverage-v8": "4.0.15",
+    "knip": "^5.69.1",
+    "lint-staged": "16.2.7",
+    "oxc-parser": "0.103.0",
+    "oxfmt": "^0.18.0",
+    "oxlint": "^1.29.0",
+    "simple-git-hooks": "2.13.1",
+    "typescript": "5.9.3",
+    "unbuild": "3.6.1",
+    "vitest": "4.0.15"
+  },
+  "peerDependencies": {
+    "oxc-parser": ">=0.98.0"
+  },
+  "packageManager": "pnpm@10.25.0"
 }
