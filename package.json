@@ -1,16 +1,15 @@
 {
   "name": "oxc-walker",
-  "type": "module",
   "version": "0.6.0",
-  "packageManager": "pnpm@10.25.0",
   "description": "",
-  "license": "MIT",
   "repository": "oxc-project/oxc-walker",
+  "license": "MIT",
   "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.mjs",
   "exports": {
     ".": "./dist/index.mjs"
   },
-  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
@@ -28,8 +27,19 @@
     "test:unit": "vitest",
     "test:types": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "oxc-parser": ">=0.98.0"
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,cjs}": [
+      "pnpm run fmt"
+    ],
+    "*.{js,ts,mjs,cjs,json,.*rc}": [
+      "pnpm run lint --fix"
+    ]
+  },
+  "resolutions": {
+    "oxc-walker": "link:."
   },
   "dependencies": {
     "magic-regexp": "^0.10.0"
@@ -47,18 +57,8 @@
     "unbuild": "3.6.1",
     "vitest": "4.0.15"
   },
-  "resolutions": {
-    "oxc-walker": "link:."
+  "peerDependencies": {
+    "oxc-parser": ">=0.98.0"
   },
-  "simple-git-hooks": {
-    "pre-commit": "npx lint-staged"
-  },
-  "lint-staged": {
-    "*.{js,ts,mjs,cjs}": [
-      "pnpm run fmt"
-    ],
-    "*.{js,ts,mjs,cjs,json,.*rc}": [
-      "pnpm run lint --fix"
-    ]
-  }
+  "packageManager": "pnpm@10.25.0"
 }
