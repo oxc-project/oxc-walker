@@ -35,7 +35,7 @@
     "@vitest/coverage-v8": "4.0.16",
     "knip": "^5.69.1",
     "lint-staged": "16.2.7",
-    "oxc-parser": "0.106.0",
+    "oxc-parser": "0.107.0",
     "oxfmt": "^0.21.0",
     "oxlint": "^1.29.0",
     "simple-git-hooks": "2.13.1",
