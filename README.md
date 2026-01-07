@@ -22,26 +22,26 @@ pnpm install oxc-walker
 ### Walk a parsed AST
 
 ```ts
-import { parseSync } from 'oxc-parser'
-import { walk } from 'oxc-walker'
+import { parseSync } from "oxc-parser";
+import { walk } from "oxc-walker";
 
-const ast = parseSync('example.js', 'const x = 1')
+const ast = parseSync("example.js", "const x = 1");
 
 walk(ast.program, {
   enter(node, parent, ctx) {
     // ...
   },
-})
+});
 ```
 
 ### Parse and walk directly
 
 ```js
-import { parseAndWalk } from 'oxc-walker'
+import { parseAndWalk } from "oxc-walker";
 
-parseAndWalk('const x = 1', 'example.js', (node, parent, ctx) => {
+parseAndWalk("const x = 1", "example.js", (node, parent, ctx) => {
   // ...
-})
+});
 ```
 
 ## ⚙️ API
@@ -56,30 +56,30 @@ interface WalkOptions {
   /**
    * The function to be called when entering a node.
    */
-  enter?: (node: Node, parent: Node | null, ctx: CallbackContext) => void
+  enter?: (node: Node, parent: Node | null, ctx: CallbackContext) => void;
   /**
    * The function to be called when leaving a node.
    */
-  leave?: (node: Node, parent: Node | null, ctx: CallbackContext) => void
+  leave?: (node: Node, parent: Node | null, ctx: CallbackContext) => void;
   /**
    * The instance of `ScopeTracker` to use for tracking declarations and references.
    */
-  scopeTracker?: ScopeTracker
+  scopeTracker?: ScopeTracker;
 }
 
 interface CallbackContext {
   /**
    * The key of the current node within its parent node object, if applicable.
    */
-  key: string | number | symbol | null | undefined
+  key: string | number | symbol | null | undefined;
   /**
    * The zero-based index of the current node within its parent's children array, if applicable.
    */
-  index: number | null
+  index: number | null;
   /**
    * The full Abstract Syntax Tree (AST) that is being walked, starting from the root node.
    */
-  ast: Program | Node
+  ast: Program | Node;
 }
 ```
 
@@ -118,19 +118,19 @@ interface ParseAndWalkOptions {
   /**
    * The function to be called when entering a node.
    */
-  enter?: (node: Node, parent: Node | null, ctx: CallbackContext) => void
+  enter?: (node: Node, parent: Node | null, ctx: CallbackContext) => void;
   /**
    * The function to be called when leaving a node.
    */
-  leave?: (node: Node, parent: Node | null, ctx: CallbackContext) => void
+  leave?: (node: Node, parent: Node | null, ctx: CallbackContext) => void;
   /**
    * The instance of `ScopeTracker` to use for tracking declarations and references.
    */
-  scopeTracker?: ScopeTracker
+  scopeTracker?: ScopeTracker;
   /**
    * The options for `oxc-parser` to use when parsing the code.
    */
-  parseOptions?: ParserOptions
+  parseOptions?: ParserOptions;
 }
 ```
 
@@ -145,30 +145,30 @@ interface ScopeTrackerOptions {
    * If true, the scope tracker will preserve exited scopes in memory.
    * @default false
    */
-  preserveExitedScopes?: boolean
+  preserveExitedScopes?: boolean;
 }
 ```
 
 #### Example usage:
 
 ```ts
-import { parseAndWalk, ScopeTracker } from 'oxc-walker'
+import { parseAndWalk, ScopeTracker } from "oxc-walker";
 
-const scopeTracker = new ScopeTracker()
+const scopeTracker = new ScopeTracker();
 
-parseAndWalk('const x = 1; function foo() { console.log(x) }', 'example.js', {
+parseAndWalk("const x = 1; function foo() { console.log(x) }", "example.js", {
   scopeTracker,
   enter(node, parent) {
-    if (node.type === 'Identifier' && node.name === 'x' && parent?.type === 'CallExpression') {
-      const declaration = scopeTracker.getDeclaration(node.name)
-      console.log(declaration) // ScopeTrackerVariable
+    if (node.type === "Identifier" && node.name === "x" && parent?.type === "CallExpression") {
+      const declaration = scopeTracker.getDeclaration(node.name);
+      console.log(declaration); // ScopeTrackerVariable
     }
   },
-})
+});
 ```
 
 ```ts
-import { parseAndWalk, ScopeTracker, walk } from 'oxc-walker'
+import { parseAndWalk, ScopeTracker, walk } from "oxc-walker";
 
 const code = `
 function foo() {
@@ -176,31 +176,31 @@ function foo() {
 }
 
 const a = 1
-`
+`;
 
 const scopeTracker = new ScopeTracker({
   preserveExitedScopes: true,
-})
+});
 
 // pre-pass to collect hoisted declarations
-const { program } = parseAndWalk(code, 'example.js', {
+const { program } = parseAndWalk(code, "example.js", {
   scopeTracker,
-})
+});
 
 // freeze the scope tracker to prevent further modifications
 // and prepare it for second pass
-scopeTracker.freeze()
+scopeTracker.freeze();
 
 // main pass to analyze references
 walk(program, {
   scopeTracker,
   enter(node) {
-    if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression' /* ... */) {
-      const declaration = scopeTracker.getDeclaration('a')
-      console.log(declaration) // ScopeTrackerVariable; would be `null` without the pre-pass
+    if (node.type === "CallExpression" && node.callee.type === "MemberExpression" /* ... */) {
+      const declaration = scopeTracker.getDeclaration("a");
+      console.log(declaration); // ScopeTrackerVariable; would be `null` without the pre-pass
     }
-  }
-})
+  },
+});
 ```
 
 #### Helpers:
