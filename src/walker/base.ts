@@ -43,7 +43,7 @@ export interface WalkerCallbackContext {
   ast: Program | Node;
 }
 
-interface WalkerThisContextLeave {
+export interface WalkerThisContextLeave {
   /**
    * Remove the current node from the AST.
    * @remarks
@@ -64,7 +64,7 @@ interface WalkerThisContextLeave {
   replace: (node: Node) => void;
 }
 
-interface WalkerThisContextEnter extends WalkerThisContextLeave {
+export interface WalkerThisContextEnter extends WalkerThisContextLeave {
   /**
    * Skip traversing the child nodes of the current node.
    */
