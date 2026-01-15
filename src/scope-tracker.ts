@@ -521,7 +521,7 @@ abstract class BaseNode<T extends Node = Node> {
   }
 }
 
-class ScopeTrackerIdentifier extends BaseNode<Identifier> {
+export class ScopeTrackerIdentifier extends BaseNode<Identifier> {
   override type = "Identifier" as const;
 
   get start() {
@@ -533,7 +533,7 @@ class ScopeTrackerIdentifier extends BaseNode<Identifier> {
   }
 }
 
-class ScopeTrackerFunctionParam extends BaseNode {
+export class ScopeTrackerFunctionParam extends BaseNode {
   type = "FunctionParam" as const;
   fnNode: Function | ArrowFunctionExpression;
 
@@ -557,7 +557,7 @@ class ScopeTrackerFunctionParam extends BaseNode {
   }
 }
 
-class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpression> {
+export class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpression> {
   type = "Function" as const;
 
   get start() {
@@ -569,7 +569,7 @@ class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpression> 
   }
 }
 
-class ScopeTrackerVariable extends BaseNode<Identifier> {
+export class ScopeTrackerVariable extends BaseNode<Identifier> {
   type = "Variable" as const;
   variableNode: VariableDeclaration;
 
@@ -587,7 +587,7 @@ class ScopeTrackerVariable extends BaseNode<Identifier> {
   }
 }
 
-class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
+export class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
   type = "Import" as const;
   importNode: ImportDeclaration;
 
@@ -605,7 +605,7 @@ class ScopeTrackerImport extends BaseNode<ImportDeclarationSpecifier> {
   }
 }
 
-class ScopeTrackerCatchParam extends BaseNode {
+export class ScopeTrackerCatchParam extends BaseNode {
   type = "CatchParam" as const;
   catchNode: CatchClause;
 
@@ -631,7 +631,7 @@ export type ScopeTrackerNode =
   | ScopeTrackerImport
   | ScopeTrackerCatchParam;
 
-interface ScopeTrackerOptions {
+export interface ScopeTrackerOptions {
   /**
    * If true, the scope tracker will preserve exited scopes in memory.
    * This is necessary when you want to do a pre-pass to collect all identifiers before walking, for example.
