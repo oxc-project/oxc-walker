@@ -35,14 +35,13 @@
     "@vitest/coverage-v8": "4.0.18",
     "knip": "^5.69.1",
     "lint-staged": "16.2.7",
-    "oxc-parser": "0.115.0",
-    "oxfmt": "^0.35.0",
+    "oxc-parser": "0.116.0",
+    "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
     "simple-git-hooks": "2.13.1",
     "typescript": "5.9.3",
     "unbuild": "3.6.1",
-    "vitest": "4.0.18",
-    "oxlint-tsgolint": "^0.15.0"
+    "vitest": "4.0.18"
   },
   "peerDependencies": {
     "oxc-parser": ">=0.98.0"
