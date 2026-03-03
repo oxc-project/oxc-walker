@@ -38,11 +38,11 @@
     "oxc-parser": "0.116.0",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
+    "oxlint-tsgolint": "^0.15.0",
     "simple-git-hooks": "2.13.1",
     "typescript": "5.9.3",
     "unbuild": "3.6.1",
-    "vitest": "4.0.18",
-    "oxlint-tsgolint": "^0.15.0"
+    "vitest": "4.0.18"
   },
   "peerDependencies": {
     "oxc-parser": ">=0.98.0"
