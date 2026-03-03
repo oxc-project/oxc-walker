@@ -6,6 +6,9 @@ function stringifyNodePart(value: unknown): string | undefined {
   if (value === null) {
     return "null";
   }
+  if (value === undefined) {
+    return undefined;
+  }
   if (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -15,7 +18,12 @@ function stringifyNodePart(value: unknown): string | undefined {
     return String(value);
   }
   if (typeof value === "object") {
-    return Object.prototype.toString.call(value);
+    if ("name" in value && typeof value.name === "string") {
+      return value.name;
+    }
+    if ("type" in value && typeof value.type === "string") {
+      return value.type;
+    }
   }
 }
 
