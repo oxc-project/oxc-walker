@@ -2,44 +2,13 @@ import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vitest";
 import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from "../src";
 
-function stringifyNodePart(value: unknown): string | undefined {
-  if (value === null) {
-    return "null";
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-  ) {
-    return String(value);
-  }
-  if (typeof value === "object") {
-    if ("name" in value && typeof value.name === "string") {
-      return value.name;
-    }
-    if ("type" in value && typeof value.type === "string") {
-      return value.type;
-    }
-  }
-}
-
 function getNodeString(node: Node) {
   const parts: string[] = [node.type];
   if ("name" in node) {
-    const name = stringifyNodePart(node.name);
-    if (name !== undefined) {
-      parts.push(name);
-    }
+    parts.push(`${node.name}`);
   }
   if ("value" in node) {
-    const value = stringifyNodePart(node.value);
-    if (value !== undefined) {
-      parts.push(value);
-    }
+    parts.push(`${node.value}`);
   }
   if ("async" in node) {
     parts.push(`async=${node.async}`);

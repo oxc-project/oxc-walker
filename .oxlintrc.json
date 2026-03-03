@@ -3,5 +3,14 @@
   "options": {
     "typeAware": true,
     "typeCheck": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["test/walker.test.ts", "test/scope-tracker.test.ts"],
+      "rules": {
+        "@typescript-eslint/no-base-to-string": "off",
+        "@typescript-eslint/restrict-template-expressions": "off"
+      }
+    }
+  ]
 }

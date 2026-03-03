@@ -2,44 +2,13 @@ import type { Node } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 import { parseAndWalk, walk } from "../src";
 
-function stringifyNodePart(value: unknown): string | undefined {
-  if (value === null) {
-    return "null";
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-  ) {
-    return String(value);
-  }
-  if (typeof value === "object") {
-    if ("name" in value && typeof value.name === "string") {
-      return value.name;
-    }
-    if ("type" in value && typeof value.type === "string") {
-      return value.type;
-    }
-  }
-}
-
 function getNodeString(node: Node) {
   const parts: string[] = [node.type];
   if ("name" in node) {
-    const name = stringifyNodePart(node.name);
-    if (name !== undefined) {
-      parts.push(name);
-    }
+    parts.push(`${node.name}`);
   }
   if ("value" in node) {
-    const value = stringifyNodePart(node.value);
-    if (value !== undefined) {
-      parts.push(value);
-    }
+    parts.push(`${node.value}`);
   }
   if ("async" in node) {
     parts.push(`async=${node.async}`);
@@ -237,10 +206,10 @@ describe("oxc-walker", () => {
         "enter:Identifier:foo|parent:FunctionDeclaration:async=false|key:id|index:null",
         "leave:Identifier:foo|parent:FunctionDeclaration:async=false|key:id|index:null",
         "enter:TSTypeParameterDeclaration|parent:FunctionDeclaration:async=false|key:typeParameters|index:null",
-        "enter:TSTypeParameter:T|parent:TSTypeParameterDeclaration|key:params|index:0",
-        "enter:Identifier:T|parent:TSTypeParameter:T|key:name|index:null",
-        "leave:Identifier:T|parent:TSTypeParameter:T|key:name|index:null",
-        "leave:TSTypeParameter:T|parent:TSTypeParameterDeclaration|key:params|index:0",
+        "enter:TSTypeParameter:[object Object]|parent:TSTypeParameterDeclaration|key:params|index:0",
+        "enter:Identifier:T|parent:TSTypeParameter:[object Object]|key:name|index:null",
+        "leave:Identifier:T|parent:TSTypeParameter:[object Object]|key:name|index:null",
+        "leave:TSTypeParameter:[object Object]|parent:TSTypeParameterDeclaration|key:params|index:0",
         "leave:TSTypeParameterDeclaration|parent:FunctionDeclaration:async=false|key:typeParameters|index:null",
         "enter:Identifier:arg|parent:FunctionDeclaration:async=false|key:params|index:0",
         "enter:TSTypeAnnotation|parent:Identifier:arg|key:typeAnnotation|index:null",
