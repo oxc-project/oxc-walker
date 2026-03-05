@@ -226,9 +226,9 @@ Published under [MIT License](./LICENCE).
 
 <!-- Badges -->
 
-[npm-version-src]: https://img.shields.io/npm/v/oxc-walker?style=flat-square
+[npm-version-src]: https://npmx.dev/api/registry/badge/version/oxc-walker
 [npm-version-href]: https://npmx.dev/package/oxc-walker
-[npm-downloads-src]: https://img.shields.io/npm/dm/oxc-walker?style=flat-square
+[npm-downloads-src]: https://npmx.dev/api/registry/badge/downloads/oxc-walker
 [npm-downloads-href]: https://npm.chart.dev/oxc-walker
 [github-actions-src]: https://img.shields.io/github/actions/workflow/status/danielroe/oxc-walker/ci.yml?branch=main&style=flat-square
 [github-actions-href]: https://github.com/danielroe/oxc-walker/actions?query=workflow%3Aci
