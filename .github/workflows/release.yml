@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
+      - uses: oxc-project/setup-node@b8d296d30eafd1ae2968fab67aead472a1dbf6d4 # v1.0.7
 
       - run: npm install -g npm@latest # For trusted publishing support
 
@@ -46,7 +46,7 @@ jobs:
         run: pnpm publish --provenance --access public
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        uses: softprops/action-gh-release@1853d73993c8ca1b2c9c1a7fede39682d0ab5c2a # v2.5.3
         with:
           draft: false
           name: v${{ needs.check-version.outputs.version }}
