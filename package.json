@@ -36,7 +36,7 @@
     "knip": "^6.0.0",
     "lint-staged": "16.4.0",
     "oxc-parser": "0.124.0",
-    "oxfmt": "^0.43.0",
+    "oxfmt": "^0.44.0",
     "oxlint": "^1.51.0",
     "oxlint-tsgolint": "^0.20.0",
     "simple-git-hooks": "2.13.1",
