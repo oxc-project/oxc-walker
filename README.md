@@ -13,10 +13,26 @@ Install package:
 
 ```sh
 # npm
-npm install oxc-walker
+npm install oxc-walker oxc-parser
 
 # pnpm
-pnpm install oxc-walker
+pnpm install oxc-walker oxc-parser
+```
+
+`oxc-parser` is an optional peer dependency. If you already depend on [`rolldown`](https://rolldown.rs/),
+`oxc-walker` will use `parseSync` from `rolldown/utils` instead, so installing `oxc-parser` is not
+required. You can also pass an explicit `parseSync` implementation via the `parseAndWalk` options:
+
+```ts
+import { parseSync } from "rolldown/utils";
+import { parseAndWalk } from "oxc-walker";
+
+parseAndWalk("const x = 1", "example.js", {
+  parseSync,
+  enter(node) {
+    // ...
+  },
+});
 ```
 
 ### Walk a parsed AST

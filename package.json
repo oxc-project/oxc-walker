@@ -45,7 +45,16 @@
     "vitest": "4.1.5"
   },
   "peerDependencies": {
-    "oxc-parser": ">=0.98.0"
+    "oxc-parser": ">=0.98.0",
+    "rolldown": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "oxc-parser": {
+      "optional": true
+    },
+    "rolldown": {
+      "optional": true
+    }
   },
   "resolutions": {
     "oxc-walker": "link:."
