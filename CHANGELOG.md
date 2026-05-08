@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/oxc-project/oxc-walker/compare/v0.7.0...v1.0.0) (2026-05-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* support rolldown or custom `parseSync` ([#288](https://github.com/oxc-project/oxc-walker/issues/288))
+
+### Features
+
+* support rolldown or custom `parseSync` ([#288](https://github.com/oxc-project/oxc-walker/issues/288)) ([8d6d4cc](https://github.com/oxc-project/oxc-walker/commit/8d6d4cc1bd3689ad534e7cf599e956a2e557fae9))
+
 ## [0.7.0](https://github.com/oxc-project/oxc-walker/compare/v0.6.0...v0.7.0) (2026-01-15)
 
 
