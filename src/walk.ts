@@ -11,9 +11,35 @@ import type {
 } from "oxc-parser";
 import type { WalkerEnter } from "./walker/base";
 import type { WalkOptions } from "./walker/sync";
+import { createRequire } from "node:module";
 import { anyOf, createRegExp, exactly } from "magic-regexp/further-magic";
-import { parseSync } from "oxc-parser";
 import { WalkerSync } from "./walker/sync";
+
+type ParseSync = (
+  filename: string,
+  sourceText: string,
+  options?: ParserOptions | null,
+) => ParseResult;
+
+let cachedParseSync: ParseSync | undefined;
+
+function resolveParseSync(): ParseSync {
+  if (cachedParseSync) return cachedParseSync;
+  const require = createRequire(import.meta.url);
+  const candidates = ["oxc-parser", "rolldown/utils"] as const;
+  for (const id of candidates) {
+    try {
+      const mod = require(id) as { parseSync?: ParseSync };
+      if (typeof mod.parseSync === "function") {
+        cachedParseSync = mod.parseSync;
+        return cachedParseSync;
+      }
+    } catch {}
+  }
+  throw new Error(
+    "oxc-walker: could not resolve a `parseSync` implementation. Install `oxc-parser` or `rolldown` (and use `rolldown/utils`), or pass a `parseSync` function via the `parseAndWalk` options.",
+  );
+}
 
 export type Identifier =
   | IdentifierName
@@ -44,6 +70,14 @@ interface ParseAndWalkOptions extends WalkOptions {
    * The options for `oxc-parser` to use when parsing the code.
    */
   parseOptions: ParserOptions;
+  /**
+   * The `parseSync` implementation to use. Defaults to `parseSync` from `oxc-parser`,
+   * falling back to `rolldown/utils` if `oxc-parser` is not installed.
+   *
+   * Provide this explicitly to avoid the runtime lookup or to use a different
+   * compatible parser (e.g. `import { parseSync } from "rolldown/utils"`).
+   */
+  parseSync: ParseSync;
 }
 
 const LANG_RE = createRegExp(
@@ -86,14 +120,18 @@ export function parseAndWalk(
   arg3: Partial<ParseAndWalkOptions> | WalkerEnter,
 ) {
   const lang = sourceFilename?.match(LANG_RE)?.groups?.lang as ParserOptions["lang"];
-  const { parseOptions: _parseOptions = {}, ...options } =
-    typeof arg3 === "function" ? { enter: arg3 } : arg3;
+  const {
+    parseOptions: _parseOptions = {},
+    parseSync: _parseSync,
+    ...options
+  } = typeof arg3 === "function" ? { enter: arg3 } : arg3;
   const parseOptions: ParserOptions = {
     sourceType: "module",
     lang,
     ..._parseOptions,
   };
-  const ast = parseSync(sourceFilename, code, parseOptions);
+  const parse = _parseSync ?? resolveParseSync();
+  const ast = parse(sourceFilename, code, parseOptions);
   walk(ast.program, options);
   return ast;
 }
