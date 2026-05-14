@@ -1,5 +1,8 @@
 packages:
   - playground
 
+overrides:
+  oxc-walker: link:.
+
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
