@@ -1,5 +1,12 @@
 packages:
   - playground
 
+allowBuilds:
+  esbuild: true
+  simple-git-hooks: true
+
+overrides:
+  oxc-walker: link:.
+
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
