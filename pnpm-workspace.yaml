@@ -1,6 +1,10 @@
 packages:
   - playground
 
+allowBuilds:
+  esbuild: true
+  simple-git-hooks: true
+
 overrides:
   oxc-walker: link:.
 
