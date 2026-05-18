@@ -7,6 +7,19 @@ allowBuilds:
 
 overrides:
   oxc-walker: link:.
+  vite: "catalog:"
+  vitest: "catalog:"
 
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vite-plus: latest
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"

@@ -1,5 +1,5 @@
 import type { Node } from "oxc-parser";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { parseAndWalk, walk } from "../src";
 
 function getNodeString(node: Node) {

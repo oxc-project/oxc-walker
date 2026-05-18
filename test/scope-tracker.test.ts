@@ -1,5 +1,5 @@
 import type { Node } from "oxc-parser";
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vite-plus/test";
 import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from "../src";
 
 function getNodeString(node: Node) {

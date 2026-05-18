@@ -17,14 +17,14 @@
   },
   "scripts": {
     "build": "unbuild",
-    "dev": "vitest dev",
-    "lint": "oxlint",
-    "fmt": "oxfmt",
+    "dev": "vp test dev",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
     "prepare": "simple-git-hooks",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm lint && pnpm test",
     "test": "pnpm test:unit && pnpm test:types",
-    "test:unit": "vitest",
+    "test:unit": "vp test",
     "test:types": "tsc --noEmit"
   },
   "dependencies": {
@@ -36,13 +36,11 @@
     "knip": "^6.0.0",
     "lint-staged": "16.4.0",
     "oxc-parser": "0.131.0",
-    "oxfmt": "^0.50.0",
-    "oxlint": "^1.51.0",
-    "oxlint-tsgolint": "^0.22.0",
     "simple-git-hooks": "2.13.1",
     "typescript": "6.0.3",
     "unbuild": "3.6.1",
-    "vitest": "4.1.6"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "oxc-parser": ">=0.98.0",
@@ -64,10 +62,10 @@
   },
   "lint-staged": {
     "*": [
-      "oxfmt --no-error-on-unmatched-pattern"
+      "vp fmt --no-error-on-unmatched-pattern"
     ],
     "*.{js,ts,mjs,cjs,json,.*rc}": [
-      "pnpm run lint --fix"
+      "vp lint --fix"
     ]
   },
   "packageManager": "pnpm@11.0.4"
