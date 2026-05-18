@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: oxc-project/setup-node@ab97f03642370d79a7e96dd286bd02a1be40e0ba # v1.3.0
+      - uses: voidzero-dev/setup-vp@40646972e9ea5e33609c1bb31ac6a27fb01b641e # v1.10.0
 
       - run: npm install -g npm@latest # For trusted publishing support
 
