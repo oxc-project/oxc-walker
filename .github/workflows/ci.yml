@@ -29,7 +29,7 @@ jobs:
         run: vp fmt --check
 
       - name: ✂️ Knip project
-        run: pnpm knip
+        run: vp exec knip
 
   test:
     runs-on: ubuntu-latest
@@ -43,13 +43,13 @@ jobs:
           cache: true
 
       - name: 🛠 Build project
-        run: pnpm build
+        run: vp run build
 
       - name: 💪 Test types
-        run: pnpm test:types
+        run: vp run test:types
 
       - name: 🧪 Test project
-        run: pnpm test:unit -- --coverage
+        run: vp test --coverage
 
       - name: 🟩 Coverage
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0

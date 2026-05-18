@@ -64,7 +64,7 @@
     "*": [
       "vp fmt --no-error-on-unmatched-pattern"
     ],
-    "*.{js,ts,mjs,cjs,json,.*rc}": [
+    "*.{js,ts,mjs,cjs}": [
       "vp lint --fix"
     ]
   },
