@@ -246,7 +246,7 @@ Published under [MIT License](./LICENCE).
 [npm-version-href]: https://npmx.dev/package/oxc-walker
 [npm-downloads-src]: https://npmx.dev/api/registry/badge/downloads/oxc-walker
 [npm-downloads-href]: https://npm.chart.dev/oxc-walker
-[github-actions-src]: https://img.shields.io/github/actions/workflow/status/danielroe/oxc-walker/ci.yml?branch=main&style=flat-square
-[github-actions-href]: https://github.com/danielroe/oxc-walker/actions?query=workflow%3Aci
-[codecov-src]: https://img.shields.io/codecov/c/gh/danielroe/oxc-walker/main?style=flat-square
-[codecov-href]: https://codecov.io/gh/danielroe/oxc-walker
+[github-actions-src]: https://img.shields.io/github/actions/workflow/status/oxc-project/oxc-walker/ci.yml?branch=main&style=flat-square
+[github-actions-href]: https://github.com/oxc-project/oxc-walker/actions?query=workflow%3Aci
+[codecov-src]: https://img.shields.io/codecov/c/gh/oxc-project/oxc-walker/main?style=flat-square
+[codecov-href]: https://codecov.io/gh/oxc-project/oxc-walker
