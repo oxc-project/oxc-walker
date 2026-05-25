@@ -1,4 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "exclude": ["catalog"]
+  "exclude": ["catalog"],
+  "entry": ["src/index.ts", "vite.config.ts", "test/**/*.test.ts"],
+  "ignoreDependencies": ["@vitest/coverage-v8"]
 }
