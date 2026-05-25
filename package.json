@@ -23,7 +23,7 @@
     "dev": "vp test dev",
     "lint": "vp lint",
     "fmt": "vp fmt",
-    "prepare": "simple-git-hooks",
+    "prepare": "vp config",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm lint && pnpm test",
     "test": "pnpm test:unit && pnpm test:types",
@@ -37,12 +37,9 @@
     "@types/node": "24.10.3",
     "@vitest/coverage-v8": "4.1.7",
     "knip": "^6.0.0",
-    "lint-staged": "16.4.0",
     "oxc-parser": "0.132.0",
-    "simple-git-hooks": "2.13.1",
     "typescript": "6.0.3",
-    "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vite-plus": "catalog:"
   },
   "peerDependencies": {
     "oxc-parser": ">=0.98.0",
@@ -58,17 +55,6 @@
   },
   "resolutions": {
     "oxc-walker": "link:."
-  },
-  "simple-git-hooks": {
-    "pre-commit": "npx lint-staged"
-  },
-  "lint-staged": {
-    "*": [
-      "vp fmt --no-error-on-unmatched-pattern"
-    ],
-    "*.{js,ts,mjs,cjs}": [
-      "vp lint --fix"
-    ]
   },
   "packageManager": "pnpm@11.0.4"
 }
