@@ -12,6 +12,14 @@ overrides:
 
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
+# oxc packages are published by the oxc project itself, so they are exempt from
+# pnpm 11's default `minimumReleaseAge` (1 day) supply-chain gate. Without this,
+# renovate bumps to a freshly released oxc-parser fail `vp install` in CI until
+# the packages are 24h old.
+minimumReleaseAgeExclude:
+  - oxc-parser
+  - "@oxc-parser/*"
+  - "@oxc-project/*"
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
