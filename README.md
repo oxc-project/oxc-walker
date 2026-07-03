@@ -250,3 +250,11 @@ Published under [MIT License](./LICENCE).
 [github-actions-href]: https://github.com/oxc-project/oxc-walker/actions?query=workflow%3Aci
 [codecov-src]: https://img.shields.io/codecov/c/gh/oxc-project/oxc-walker/main?style=flat-square
 [codecov-href]: https://codecov.io/gh/oxc-project/oxc-walker
+
+## ❤ Who's [Sponsoring Oxc](https://github.com/sponsors/Boshen)?
+
+<p align="center">
+  <a href="https://github.com/sponsors/Boshen">
+    <img src="https://raw.githubusercontent.com/Boshen/sponsors/main/sponsors.svg" alt="Our sponsors" />
+  </a>
+</p>
