@@ -8,7 +8,6 @@ allowBuilds:
 overrides:
   oxc-walker: link:.
   vite: "catalog:"
-  vitest: "catalog:"
 
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
@@ -20,9 +19,10 @@ minimumReleaseAgeExclude:
   - oxc-parser
   - "@oxc-parser/*"
   - "@oxc-project/*"
+  - vite-plus
+  - "@voidzero-dev/*"
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
   vite-plus: latest
 peerDependencyRules:
   allowAny:

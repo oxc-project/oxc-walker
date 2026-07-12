@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@types/node": "24.10.3",
-    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/coverage-v8": "4.1.10",
     "knip": "^6.0.0",
     "oxc-parser": "0.136.0",
     "typescript": "6.0.3",
