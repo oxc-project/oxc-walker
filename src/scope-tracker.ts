@@ -7,7 +7,7 @@ import type {
   ImportDeclarationSpecifier,
   Node,
   VariableDeclaration,
-} from "oxc-parser";
+} from "@oxc-project/types";
 import type { Identifier } from "./walk";
 import { walk } from "./walk";
 

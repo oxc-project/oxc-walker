@@ -34,6 +34,7 @@
     "magic-regexp": "^0.11.0"
   },
   "devDependencies": {
+    "@oxc-project/types": "0.139.0",
     "@types/node": "24.10.3",
     "@vitest/coverage-v8": "4.1.10",
     "knip": "^6.0.0",
@@ -42,10 +43,14 @@
     "vite-plus": "catalog:"
   },
   "peerDependencies": {
+    "@oxc-project/types": ">=0.98.0",
     "oxc-parser": ">=0.98.0",
     "rolldown": ">=1.0.0"
   },
   "peerDependenciesMeta": {
+    "@oxc-project/types": {
+      "optional": true
+    },
     "oxc-parser": {
       "optional": true
     },

@@ -1,4 +1,4 @@
-import type { Node } from "oxc-parser";
+import type { Node } from "@oxc-project/types";
 
 export function isNode(v: unknown): v is Node {
   return (

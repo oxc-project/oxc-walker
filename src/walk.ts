@@ -4,11 +4,10 @@ import type {
   IdentifierReference,
   LabelIdentifier,
   Node,
-  ParseResult,
-  ParserOptions,
   Program,
   TSIndexSignatureName,
-} from "oxc-parser";
+} from "@oxc-project/types";
+import type { ParseResult, ParserOptions } from "oxc-parser";
 import type { WalkerEnter } from "./walker/base";
 import type { WalkOptions } from "./walker/sync";
 import { createRequire } from "node:module";
