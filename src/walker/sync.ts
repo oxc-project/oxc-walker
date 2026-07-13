@@ -1,4 +1,4 @@
-import type { Node } from "oxc-parser";
+import type { Node } from "@oxc-project/types";
 import type { ScopeTracker } from "../scope-tracker";
 import type { WalkerCallbackContext, WalkerEnter, WalkerLeave, WalkerOptions } from "./base";
 import { isNode } from "../utils";

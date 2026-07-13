@@ -1,4 +1,4 @@
-import type { Node, Program } from "oxc-parser";
+import type { Node, Program } from "@oxc-project/types";
 import type { ScopeTracker, ScopeTrackerProtected } from "../scope-tracker";
 
 export interface WalkerCallbackContext {
