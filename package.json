@@ -39,7 +39,7 @@
     "@vitest/coverage-v8": "4.1.10",
     "knip": "^6.0.0",
     "oxc-parser": "0.140.0",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
   "peerDependencies": {
