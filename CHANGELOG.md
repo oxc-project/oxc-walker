@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/oxc-project/oxc-walker/compare/v1.0.0...v1.0.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* use `@oxc-project/types` for ast types ([#332](https://github.com/oxc-project/oxc-walker/issues/332)) ([4ef7ab0](https://github.com/oxc-project/oxc-walker/commit/4ef7ab081eefcbe14961766b1dd0f7a3196671d1))
+
 ## [1.0.0](https://github.com/oxc-project/oxc-walker/compare/v0.7.0...v1.0.0) (2026-05-08)
 
 
