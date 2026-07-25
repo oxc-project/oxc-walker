@@ -30,9 +30,6 @@
     "test:unit": "vp test",
     "test:types": "tsc --noEmit"
   },
-  "dependencies": {
-    "magic-regexp": "^0.11.0"
-  },
   "devDependencies": {
     "@oxc-project/types": "0.141.0",
     "@types/node": "24.10.3",

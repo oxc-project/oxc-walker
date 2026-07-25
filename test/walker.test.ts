@@ -340,16 +340,22 @@ describe("oxc-walker", () => {
     );
   });
 
-  it("handles language extensions in path", () => {
-    let didEncounterTypescript = false;
-    parseAndWalk("const foo: number = 1", "directory.js/file.ts", {
-      enter(node) {
-        if (node.type === "TSTypeAnnotation") {
-          didEncounterTypescript = true;
-        }
-      },
-    });
-    expect(didEncounterTypescript).toBe(true);
+  it.each([
+    ["js", "const foo = 1"],
+    ["cjs", "const foo = 1"],
+    ["mjs", "const foo = 1"],
+    ["jsx", "const foo = <div />"],
+    ["cjsx", "const foo = <div />"],
+    ["mjsx", "const foo = <div />"],
+    ["ts", "const foo: number = 1"],
+    ["cts", "const foo: number = 1"],
+    ["mts", "const foo: number = 1"],
+    ["tsx", "const foo: number = <div />"],
+    ["ctsx", "const foo: number = <div />"],
+    ["mtsx", "const foo: number = <div />"],
+  ])("handles .%s language extensions in paths", (extension, code) => {
+    const result = parseAndWalk(code, `directory.js/file.${extension}`, {});
+    expect(result.errors).toEqual([]);
   });
 
   it("accepts options for parsing", () => {
