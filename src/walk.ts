@@ -11,7 +11,6 @@ import type { ParseResult, ParserOptions } from "oxc-parser";
 import type { WalkerEnter } from "./walker/base";
 import type { WalkOptions } from "./walker/sync";
 import { createRequire } from "node:module";
-import { anyOf, createRegExp, exactly } from "magic-regexp/further-magic";
 import { WalkerSync } from "./walker/sync";
 
 type ParseSync = (
@@ -79,15 +78,7 @@ interface ParseAndWalkOptions extends WalkOptions {
   parseSync: ParseSync;
 }
 
-const LANG_RE = createRegExp(
-  exactly("jsx")
-    .or("tsx")
-    .or("js")
-    .or("ts")
-    .groupedAs("lang")
-    .after(exactly(".").and(anyOf("c", "m").optionally()))
-    .at.lineEnd(),
-);
+const LANG_RE = /\.(?:c|m)?(?<lang>jsx?|tsx?)$/;
 
 /**
  * Parse the code and walk the AST with the given callback, which is called when entering a node.
