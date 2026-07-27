@@ -31,11 +31,11 @@
     "test:types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@oxc-project/types": "0.141.0",
+    "@oxc-project/types": "0.142.0",
     "@types/node": "24.10.3",
     "@vitest/coverage-v8": "4.1.10",
     "knip": "^6.0.0",
-    "oxc-parser": "0.141.0",
+    "oxc-parser": "0.142.0",
     "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
