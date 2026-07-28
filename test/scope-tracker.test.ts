@@ -1,6 +1,12 @@
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
-import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from "../src";
+import {
+  getUndeclaredIdentifiersInFunction,
+  isReferenceIdentifier,
+  parseAndWalk,
+  ScopeTracker,
+  walk,
+} from "../src";
 
 function getNodeString(node: Node) {
   const parts: string[] = [node.type];
@@ -460,6 +466,68 @@ describe("scope tracker", () => {
     expect(scopeTracker.getScopes().get("")?.size).toBe(3);
   });
 
+  it("should resolve identifiers used as switch case labels", () => {
+    const code = `
+    import { foo } from './foo'
+    const bar = 1
+    function baz() {}
+    class Qux {}
+
+    switch (input) {
+      case foo:
+        break
+      case bar:
+        break
+      case baz:
+        break
+      case Qux:
+        break
+      case nope:
+        break
+    }
+    `;
+
+    const scopeTracker = new TestScopeTracker({
+      preserveExitedScopes: true,
+    });
+
+    let processedCases = 0;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter: (node) => {
+        if (node.type !== "SwitchCase" || node.test?.type !== "Identifier") {
+          return;
+        }
+
+        const declaration = scopeTracker.getDeclaration(node.test.name);
+        switch (node.test.name) {
+          case "foo":
+            expect(declaration?.type).toEqual("Import");
+            break;
+          case "bar":
+            expect(declaration?.type).toEqual("Variable");
+            break;
+          case "baz":
+            expect(declaration?.type).toEqual("Function");
+            break;
+          case "Qux":
+            expect(declaration?.type).toEqual("Identifier");
+            break;
+          case "nope":
+            expect(declaration).toBeNull();
+            break;
+          default:
+            assert.fail(`Unexpected switch case label: ${node.test.name}`);
+        }
+
+        processedCases++;
+      },
+    });
+
+    expect(processedCases).toBe(5);
+  });
+
   it("should handle classes", () => {
     const code = `
     // ""
@@ -873,6 +941,302 @@ describe("parsing", () => {
     expect(e.isUnderScope(b.scope)).toBe(false);
     expect(b.isUnderScope(d.scope)).toBe(false);
     expect(c.isUnderScope(e.scope)).toBe(false);
+  });
+
+  it("should treat identifiers in switch case tests as references", () => {
+    const code = `
+    function handle(input) {
+      const foo = 1
+
+      switch (input) {
+        case foo:
+          return 1
+        case bar:
+          return 2
+        default:
+          return 0
+      }
+    }
+    `;
+
+    let processedFunctions = 0;
+
+    parseAndWalk(code, filename, {
+      enter: (node) => {
+        if (node.type !== "FunctionDeclaration") {
+          return;
+        }
+
+        // `input` and `foo` are declared within the function,
+        // while `bar` is a reference to an identifier outside of it
+        expect(getUndeclaredIdentifiersInFunction(node)).toEqual(["bar"]);
+
+        processedFunctions++;
+      },
+    });
+
+    expect(processedFunctions).toBe(1);
+  });
+});
+
+describe("reference identifiers", () => {
+  function getUnmatchedIdentifiers(code: string, sourceFilename = filename): string[] {
+    const scopeTracker = new ScopeTracker({ preserveExitedScopes: true });
+
+    // first pass to collect all declarations and hoist them
+    parseAndWalk(code, sourceFilename, { scopeTracker });
+    scopeTracker.freeze();
+
+    const unmatched = new Set<string>();
+    parseAndWalk(code, sourceFilename, {
+      scopeTracker,
+      enter(node, parent) {
+        // re-export specifiers refer to the other module's exports
+        if (node.type === "ExportNamedDeclaration" && node.source) {
+          this.skip();
+          return;
+        }
+
+        if (
+          (node.type === "Identifier" || node.type === "JSXIdentifier") &&
+          isReferenceIdentifier(node, parent) &&
+          !scopeTracker.isDeclared(node.name)
+        ) {
+          unmatched.add(node.name);
+        }
+      },
+    });
+
+    return [...unmatched].sort();
+  }
+
+  it("should detect references in statements", () => {
+    const code = `
+    switch (input) {
+      case ref1:
+        break
+    }
+
+    function fn1() {
+      return ref2
+    }
+    function fn2() {
+      throw ref3
+    }
+    function fn3(p1 = ref4) {
+      return p1
+    }
+
+    for (const i of ref5) {}
+    for (const i in ref6) {}
+
+    export default ref7
+
+    const [d1 = ref8] = []
+    const { d2 = ref9 } = {}
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "input",
+      "ref1",
+      "ref2",
+      "ref3",
+      "ref4",
+      "ref5",
+      "ref6",
+      "ref7",
+      "ref8",
+      "ref9",
+    ]);
+  });
+
+  it("should not report identifiers declared via patterns and params", () => {
+    const code = `
+    const [a1 = 1] = []
+    const { a2 = 1, ...a3 } = {}
+    try {} catch (e1) { e1() }
+    function fn1({ p1 }, [p2], p3 = 1, ...p4) {
+      p1(); p2(); p3(); p4()
+    }
+    const fn2 = ({ p5 }) => p5()
+    a1(); a2(); a3()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not leak params and catch bindings to the enclosing scope", () => {
+    const code = `
+    const fn1 = ({ p1 }) => p1()
+    function fn2(p2) { p2() }
+    try {} catch ({ e1 }) { e1() }
+    p1(); p2(); e1()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["e1", "p1", "p2"]);
+  });
+
+  it("should resolve references to imports", () => {
+    const code = `
+    import { Bar } from 'foobar'
+    function foo(mode) {
+      switch (mode) {
+        case Foo:
+          return Bar
+      }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["Foo"]);
+  });
+
+  it("should detect references in computed member expressions", () => {
+    const code = `
+    obj[ref1]
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["obj", "ref1"]);
+  });
+
+  it("should detect references in computed keys", () => {
+    const code = `
+    const obj = { [ref1]: 1 }
+    class C1 {
+      [ref2] = ref3;
+      [ref4]() {}
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["ref1", "ref2", "ref3", "ref4"]);
+  });
+
+  it("should not report re-export specifiers as references", () => {
+    const code = `
+    export { ref1 } from './one'
+    export { ref2 as ref3 } from './two'
+    export * as ref4 from './three'
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should detect renamed imports", () => {
+    const code = `
+    import { a as b } from 'x'
+    b()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report statement labels as references", () => {
+    const code = `
+    outer: for (const i of list) {
+      if (i) break outer
+      continue outer
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["list"]);
+  });
+
+  it("should not report type-only identifiers as references", () => {
+    const code = `
+    const x: SomeType = load<OtherType>()
+    interface Foo { bar: Baz }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["load"]);
+  });
+
+  it("should detect references in expression positions", () => {
+    const code = `
+    const obj = { foo }
+    class A extends Base {}
+    typeof ref1
+    const sum = ref2 + ref3
+    const pick = cond ? ref4 : ref5
+    const arr = [...ref6]
+    const fn = async () => await ref7
+    const tpl = tag\`\${ref8}\`
+    const inst = new Ctor()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "Base",
+      "Ctor",
+      "cond",
+      "foo",
+      "ref1",
+      "ref2",
+      "ref3",
+      "ref4",
+      "ref5",
+      "ref6",
+      "ref7",
+      "ref8",
+      "tag",
+    ]);
+  });
+
+  it("should detect references in assignment targets", () => {
+    const code = `
+    ref1 = 1
+    ref2++
+    ;({ a: ref3 } = obj)
+    ;[ref4] = arr
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["arr", "obj", "ref1", "ref2", "ref3", "ref4"]);
+  });
+
+  it("should not report non-computed keys and members as references", () => {
+    const code = `
+    obj.prop
+    const x = { key: 1 }
+    class C {
+      method() {}
+      get accessor() { return 1 }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["obj"]);
+  });
+
+  it("should report export specifiers without a source as references", () => {
+    const code = `
+    const foo = 1
+    export { foo, bar }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["bar"]);
+  });
+
+  it("should detect references in computed pattern keys", () => {
+    const code = `
+    const { [key]: value } = obj
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["key", "obj"]);
+  });
+
+  it("should resolve references to hoisted declarations", () => {
+    const code = `
+    foo()
+    bar
+    function foo() {}
+    var bar = 1
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should detect references in JSX", () => {
+    const code = `
+    const el = <Foo prop={bar}>{baz}</Foo>
+    `;
+
+    expect(getUnmatchedIdentifiers(code, "test.tsx")).toEqual(["Foo", "bar", "baz"]);
   });
 });
 

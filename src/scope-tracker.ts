@@ -5,6 +5,7 @@ import type {
   IdentifierReference,
   ImportDeclaration,
   ImportDeclarationSpecifier,
+  JSXIdentifier,
   Node,
   VariableDeclaration,
 } from "@oxc-project/types";
@@ -383,6 +384,9 @@ function getPatternIdentifiers(pattern: Node) {
   return identifiers;
 }
 
+/**
+ * Check if an identifier is in a binding position, where it declares a new variable.
+ */
 export function isBindingIdentifier(node: Node, parent: Node | null) {
   if (!parent || node.type !== "Identifier") {
     return false;
@@ -411,14 +415,6 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
       // class name
       return parent.id === node;
 
-    case "MethodDefinition":
-      // class method name, except computed ones
-      return parent.key === node && !parent.computed;
-
-    case "PropertyDefinition":
-      // class property name, except computed ones
-      return parent.key === node && !parent.computed;
-
     case "VariableDeclarator":
       // variable name
       return getPatternIdentifiers(parent.id).includes(node);
@@ -430,16 +426,98 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
       }
       return getPatternIdentifiers(parent.param).includes(node);
 
-    case "Property":
-      // property key if not used as a shorthand or a computed key
-      return parent.key === node && parent.value !== node && !parent.computed;
+    case "ImportSpecifier":
+      // the local name of an import
+      return parent.local === node;
 
-    case "MemberExpression":
-      // member expression properties, except computed ones (`foo[bar]`)
-      return parent.property === node && !parent.computed;
+    case "ImportDefaultSpecifier":
+    case "ImportNamespaceSpecifier":
+      return true;
   }
 
   return false;
+}
+
+/**
+ * Check if an identifier is a reference.
+ *
+ * Note that this function returns `true` for the local name of a plain export
+ * (`export { foo }`), where it is a genuine reference to a local variable,
+ * but also for the local name of a re-export (`export { foo } from '...'`),
+ * where it refers to the other module's exports instead.
+ *
+ * The two are indistinguishable from the specifier alone, as the `source` lives
+ * on the parent `ExportNamedDeclaration`.
+ * Skip re-export declarations during the walk to avoid the false positives.
+ */
+export function isReferenceIdentifier(node: Node, parent: Node | null) {
+  if (!parent) {
+    return false;
+  }
+
+  if (node.type === "JSXIdentifier") {
+    switch (parent.type) {
+      case "JSXOpeningElement":
+      case "JSXClosingElement":
+        // lowercase element names refer to intrinsic elements, not variables
+        return parent.name === node && !/^[a-z]/.test(node.name);
+      case "JSXMemberExpression":
+        return parent.object === node;
+      case "JSXAttribute":
+      case "JSXNamespacedName":
+        return false;
+    }
+    return false;
+  }
+
+  if (node.type !== "Identifier" || isBindingIdentifier(node, parent)) {
+    return false;
+  }
+
+  switch (parent.type) {
+    case "MemberExpression":
+      // the object and computed properties (`foo[bar]`), but not `foo.bar`
+      return parent.object === node || parent.computed;
+
+    case "Property":
+      // property values, shorthands and computed keys, but not `{ foo: 1 }`
+      return parent.value === node || parent.computed;
+
+    case "MethodDefinition":
+    case "PropertyDefinition":
+      // computed class member keys, but not `class { foo() {} }`
+      return parent.value === node || parent.computed;
+
+    case "ExportSpecifier":
+      // the local name of an export, but not the exported name of `export { foo as bar }`
+      return parent.local === node;
+
+    case "ExportAllDeclaration":
+      // the exported name of `export * as foo from '...'`
+      return false;
+
+    case "ImportSpecifier":
+      // the imported name of `import { foo as bar }`
+      return false;
+
+    case "LabeledStatement":
+    case "BreakStatement":
+    case "ContinueStatement":
+      // statement labels
+      return false;
+
+    // type-only positions
+    case "TSTypeReference":
+    case "TSQualifiedName":
+    case "TSTypeParameter":
+    case "TSInterfaceDeclaration":
+    case "TSTypeAliasDeclaration":
+    case "TSPropertySignature":
+    case "TSMethodSignature":
+      return false;
+  }
+
+  return true;
 }
 
 export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctionExpression) {
@@ -449,10 +527,10 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
   const undeclaredIdentifiers = new Set<string>();
 
   function isIdentifierUndeclared(
-    node: Omit<IdentifierReference, "typeAnnotation">,
+    node: Omit<IdentifierReference, "typeAnnotation"> | JSXIdentifier,
     parent: Node | null,
   ) {
-    return !isBindingIdentifier(node, parent) && !scopeTracker.isDeclared(node.name);
+    return isReferenceIdentifier(node, parent) && !scopeTracker.isDeclared(node.name);
   }
 
   // first pass to collect all declarations and hoist them
@@ -465,7 +543,10 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
   walk(node, {
     scopeTracker,
     enter(node, parent) {
-      if (node.type === "Identifier" && isIdentifierUndeclared(node, parent)) {
+      if (
+        (node.type === "Identifier" || node.type === "JSXIdentifier") &&
+        isIdentifierUndeclared(node, parent)
+      ) {
         undeclaredIdentifiers.add(node.name);
       }
     },

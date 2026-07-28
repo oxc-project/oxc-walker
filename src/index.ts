@@ -1,6 +1,7 @@
 export {
   getUndeclaredIdentifiersInFunction,
   isBindingIdentifier,
+  isReferenceIdentifier,
   ScopeTrackerFunctionParam,
   ScopeTrackerFunction,
   ScopeTrackerVariable,
