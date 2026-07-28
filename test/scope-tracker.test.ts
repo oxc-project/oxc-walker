@@ -1238,6 +1238,50 @@ describe("reference identifiers", () => {
 
     expect(getUnmatchedIdentifiers(code, "test.tsx")).toEqual(["Foo", "bar", "baz"]);
   });
+
+  it("should not report meta properties as references", () => {
+    const code = `
+    const url = import.meta.url
+    function f() { return new.target }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report import attribute keys as references", () => {
+    const code = `
+    import data from './data.json' with { type: 'json' }
+    data
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare enums and not report their members as references", () => {
+    const code = `
+    enum E { A, B }
+    const x = E.A
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare namespaces and not report their names as references", () => {
+    const code = `
+    namespace NS { export const a = 1 }
+    NS.a
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report index signature parameters as references", () => {
+    const code = `
+    interface I { [key: string]: number }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
 });
 
 export class TestScopeTracker extends ScopeTracker {

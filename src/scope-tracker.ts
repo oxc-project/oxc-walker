@@ -154,6 +154,7 @@ export class ScopeTracker {
       case "Program":
       case "BlockStatement":
       case "StaticBlock":
+      case "TSModuleBlock":
         this.pushScope();
         break;
 
@@ -226,6 +227,17 @@ export class ScopeTracker {
         }
         break;
 
+      case "TSEnumDeclaration":
+      case "TSModuleDeclaration":
+        // enums and namespaces declare a value binding for their name
+        if (node.id.type === "Identifier" && node.id.name) {
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+          );
+        }
+        break;
+
       case "CatchClause":
         this.pushScope();
         if (node.param) {
@@ -264,6 +276,7 @@ export class ScopeTracker {
       case "FunctionDeclaration":
       case "ArrowFunctionExpression":
       case "StaticBlock":
+      case "TSModuleBlock":
       case "ClassExpression":
       case "ForStatement":
       case "ForOfStatement":
@@ -433,6 +446,11 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
     case "ImportDefaultSpecifier":
     case "ImportNamespaceSpecifier":
       return true;
+
+    case "TSEnumDeclaration":
+    case "TSModuleDeclaration":
+      // enum and namespace names
+      return parent.id === node;
   }
 
   return false;
@@ -506,6 +524,18 @@ export function isReferenceIdentifier(node: Node, parent: Node | null) {
       // statement labels
       return false;
 
+    case "MetaProperty":
+      // `import.meta` and `new.target`
+      return false;
+
+    case "ImportAttribute":
+      // attribute keys (`with { type: 'json' }`)
+      return false;
+
+    case "TSEnumMember":
+      // enum member names, but not their initializers (`enum E { A = B }`)
+      return parent.id !== node;
+
     // type-only positions
     case "TSTypeReference":
     case "TSQualifiedName":
@@ -514,6 +544,7 @@ export function isReferenceIdentifier(node: Node, parent: Node | null) {
     case "TSTypeAliasDeclaration":
     case "TSPropertySignature":
     case "TSMethodSignature":
+    case "TSIndexSignature":
       return false;
   }
 
