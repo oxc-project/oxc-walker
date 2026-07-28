@@ -412,12 +412,12 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
       return parent.id === node;
 
     case "MethodDefinition":
-      // class method name
-      return parent.key === node;
+      // class method name, except computed ones
+      return parent.key === node && !parent.computed;
 
     case "PropertyDefinition":
-      // class property name
-      return parent.key === node;
+      // class property name, except computed ones
+      return parent.key === node && !parent.computed;
 
     case "VariableDeclarator":
       // variable name
@@ -431,12 +431,12 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
       return getPatternIdentifiers(parent.param).includes(node);
 
     case "Property":
-      // property key if not used as a shorthand
-      return parent.key === node && parent.value !== node;
+      // property key if not used as a shorthand or a computed key
+      return parent.key === node && parent.value !== node && !parent.computed;
 
     case "MemberExpression":
-      // member expression properties
-      return parent.property === node;
+      // member expression properties, except computed ones (`foo[bar]`)
+      return parent.property === node && !parent.computed;
   }
 
   return false;
