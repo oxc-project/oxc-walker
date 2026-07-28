@@ -10,7 +10,12 @@ export {
   ScopeTrackerCatchParam,
   ScopeTracker,
 } from "./scope-tracker";
-export type { ScopeTrackerOptions, ScopeTrackerNode } from "./scope-tracker";
+export type {
+  ScopeTrackerOptions,
+  ScopeTrackerQueryOptions,
+  ScopeTrackerNode,
+  IsReferenceIdentifierOptions,
+} from "./scope-tracker";
 export type {
   WalkerThisContextEnter,
   WalkerThisContextLeave,

@@ -71,6 +71,7 @@ export class ScopeTracker {
   protected scopeIndexStack: number[] = [];
   protected scopeIndexKey = "";
   protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
+  protected typeScopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
 
   protected options: Partial<ScopeTrackerOptions>;
   protected isFrozen = false;
@@ -96,22 +97,40 @@ export class ScopeTracker {
 
     if (!this.options.preserveExitedScopes) {
       this.scopes.delete(this.scopeIndexKey);
+      this.typeScopes.delete(this.scopeIndexKey);
     }
 
     this.updateScopeIndexKey();
   }
 
-  protected declareIdentifier(name: string, data: ScopeTrackerNode) {
+  protected declareInNamespace(
+    scopes: Map<string, Map<string, ScopeTrackerNode>>,
+    name: string,
+    data: ScopeTrackerNode,
+  ) {
+    let scope = scopes.get(this.scopeIndexKey);
+    if (!scope) {
+      scope = new Map();
+      scopes.set(this.scopeIndexKey, scope);
+    }
+    scope.set(name, data);
+  }
+
+  protected declareIdentifier(
+    name: string,
+    data: ScopeTrackerNode,
+    namespaces: { value?: boolean; type?: boolean } = { value: true },
+  ) {
     if (this.isFrozen) {
       return;
     }
 
-    let scope = this.scopes.get(this.scopeIndexKey);
-    if (!scope) {
-      scope = new Map();
-      this.scopes.set(this.scopeIndexKey, scope);
+    if (namespaces.value) {
+      this.declareInNamespace(this.scopes, name, data);
     }
-    scope.set(name, data);
+    if (namespaces.type) {
+      this.declareInNamespace(this.typeScopes, name, data);
+    }
   }
 
   protected declareFunctionParameter(param: Node, fn: Function | ArrowFunctionExpression) {
@@ -198,10 +217,12 @@ export class ScopeTracker {
 
       case "ClassDeclaration":
         // declare class name for named classes, skip for `export default`
+        // classes are referencable both as values and as types
         if (node.id?.name) {
           this.declareIdentifier(
             node.id.name,
             new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+            { value: true, type: true },
           );
         }
         break;
@@ -214,27 +235,83 @@ export class ScopeTracker {
           this.declareIdentifier(
             node.id.name,
             new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+            { value: true, type: true },
           );
         }
         break;
 
       case "ImportDeclaration":
+        // imports are referencable both as values and as types
         for (const specifier of node.specifiers) {
           this.declareIdentifier(
             specifier.local.name,
             new ScopeTrackerImport(specifier, this.scopeIndexKey, node),
+            { value: true, type: true },
           );
         }
         break;
 
       case "TSEnumDeclaration":
       case "TSModuleDeclaration":
-        // enums and namespaces declare a value binding for their name
-        if (node.id.type === "Identifier" && node.id.name) {
+      case "TSImportEqualsDeclaration":
+        // enums, namespaces and `import =` are referencable both as values and as types (except `declare global`, which does not create a binding)
+        if (node.type === "TSModuleDeclaration" && node.kind === "global") {
+          break;
+        }
+        if (node.id?.type === "Identifier" && node.id.name) {
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+            { value: true, type: true },
+          );
+        }
+        break;
+
+      case "TSDeclareFunction":
+        // `declare function` and function overload signatures declare a value binding
+        if (node.id?.name) {
           this.declareIdentifier(
             node.id.name,
             new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
           );
+        }
+        break;
+
+      case "TSInterfaceDeclaration":
+      case "TSTypeAliasDeclaration":
+        // interfaces and type aliases declare a binding in the type namespace only;
+        // a scope is pushed so that their type parameters do not leak out
+        if (node.id?.name) {
+          this.declareIdentifier(
+            node.id.name,
+            new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
+            { type: true },
+          );
+        }
+        this.pushScope();
+        break;
+
+      case "TSTypeParameter":
+        // generic type parameters (`function f<T>()`)
+        if (node.name?.name) {
+          this.declareIdentifier(
+            node.name.name,
+            new ScopeTrackerIdentifier(node.name, this.scopeIndexKey),
+            { type: true },
+          );
+        }
+        break;
+
+      case "TSEnumBody":
+        // enum members are referencable by name within the enum body
+        this.pushScope();
+        for (const member of node.members) {
+          if (member.id.type === "Identifier") {
+            this.declareIdentifier(
+              member.id.name,
+              new ScopeTrackerIdentifier(member.id, this.scopeIndexKey),
+            );
+          }
         }
         break;
 
@@ -277,6 +354,9 @@ export class ScopeTracker {
       case "ArrowFunctionExpression":
       case "StaticBlock":
       case "TSModuleBlock":
+      case "TSEnumBody":
+      case "TSInterfaceDeclaration":
+      case "TSTypeAliasDeclaration":
       case "ClassExpression":
       case "ForStatement":
       case "ForOfStatement":
@@ -290,41 +370,44 @@ export class ScopeTracker {
     }
   };
 
-  /**
-   * Check if an identifier is declared in the current scope or any parent scope.
-   * @param name the identifier name to check
-   */
-  isDeclared(name: string) {
+  protected getDeclarationIn(
+    scopes: Map<string, Map<string, ScopeTrackerNode>>,
+    name: string,
+  ): ScopeTrackerNode | null {
     if (!this.scopeIndexKey) {
-      return this.scopes.get("")?.has(name) || false;
+      return scopes.get("")?.get(name) ?? null;
     }
 
     const indices = this.scopeIndexKey.split("-").map(Number);
     for (let i = indices.length; i >= 0; i--) {
-      if (this.scopes.get(indices.slice(0, i).join("-"))?.has(name)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Get the declaration node for a given identifier name.
-   * @param name the identifier name to look up
-   */
-  getDeclaration(name: string): ScopeTrackerNode | null {
-    if (!this.scopeIndexKey) {
-      return this.scopes.get("")?.get(name) ?? null;
-    }
-
-    const indices = this.scopeIndexKey.split("-").map(Number);
-    for (let i = indices.length; i >= 0; i--) {
-      const node = this.scopes.get(indices.slice(0, i).join("-"))?.get(name);
+      const node = scopes.get(indices.slice(0, i).join("-"))?.get(name);
       if (node) {
         return node;
       }
     }
     return null;
+  }
+
+  /**
+   * Check if an identifier is declared in the current scope or any parent scope.
+   * @param name the identifier name to check
+   * @param options which namespace to check — the value namespace (default), the type namespace, or both
+   */
+  isDeclared(name: string, options?: ScopeTrackerQueryOptions) {
+    return this.getDeclaration(name, options) !== null;
+  }
+
+  /**
+   * Get the declaration node for a given identifier name.
+   * @param name the identifier name to look up
+   * @param options which namespace to check — the value namespace (default), the type namespace, or both
+   */
+  getDeclaration(name: string, options?: ScopeTrackerQueryOptions): ScopeTrackerNode | null {
+    const mode = options?.mode ?? "value";
+    return (
+      (mode !== "type" ? this.getDeclarationIn(this.scopes, name) : null) ??
+      (mode !== "value" ? this.getDeclarationIn(this.typeScopes, name) : null)
+    );
   }
 
   /**
@@ -377,6 +460,9 @@ function getPatternIdentifiers(pattern: Node) {
       case "RestElement":
         collectIdentifiers(pattern.argument);
         break;
+      case "TSParameterProperty":
+        collectIdentifiers(pattern.parameter);
+        break;
       case "ArrayPattern":
         for (const element of pattern.elements) {
           if (element) {
@@ -409,6 +495,7 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
     case "FunctionDeclaration":
     case "FunctionExpression":
     case "ArrowFunctionExpression":
+    case "TSDeclareFunction":
       // function name or parameters
       if (parent.type !== "ArrowFunctionExpression" && parent.id === node) {
         return true;
@@ -451,6 +538,14 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
     case "TSModuleDeclaration":
       // enum and namespace names
       return parent.id === node;
+
+    case "TSImportEqualsDeclaration":
+      // import alias name (`import A = require('...')`)
+      return parent.id === node;
+
+    case "TSParameterProperty":
+      // constructor parameter properties (`constructor(private foo) {}`)
+      return getPatternIdentifiers(parent.parameter).includes(node);
   }
 
   return false;
@@ -468,12 +563,21 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
  * on the parent `ExportNamedDeclaration`.
  * Skip re-export declarations during the walk to avoid the false positives.
  */
-export function isReferenceIdentifier(node: Node, parent: Node | null) {
+export function isReferenceIdentifier(
+  node: Node,
+  parent: Node | null,
+  options?: IsReferenceIdentifierOptions,
+) {
   if (!parent) {
     return false;
   }
 
+  const mode = options?.mode ?? "value";
+
   if (node.type === "JSXIdentifier") {
+    if (mode === "type") {
+      return false;
+    }
     switch (parent.type) {
       case "JSXOpeningElement":
       case "JSXClosingElement":
@@ -495,20 +599,21 @@ export function isReferenceIdentifier(node: Node, parent: Node | null) {
   switch (parent.type) {
     case "MemberExpression":
       // the object and computed properties (`foo[bar]`), but not `foo.bar`
-      return parent.object === node || parent.computed;
+      return mode !== "type" && (parent.object === node || parent.computed);
 
     case "Property":
       // property values, shorthands and computed keys, but not `{ foo: 1 }`
-      return parent.value === node || parent.computed;
+      return mode !== "type" && (parent.value === node || parent.computed);
 
     case "MethodDefinition":
     case "PropertyDefinition":
+    case "AccessorProperty":
       // computed class member keys, but not `class { foo() {} }`
-      return parent.value === node || parent.computed;
+      return mode !== "type" && (parent.value === node || parent.computed);
 
     case "ExportSpecifier":
       // the local name of an export, but not the exported name of `export { foo as bar }`
-      return parent.local === node;
+      return mode !== "type" && parent.local === node;
 
     case "ExportAllDeclaration":
       // the exported name of `export * as foo from '...'`
@@ -534,11 +639,23 @@ export function isReferenceIdentifier(node: Node, parent: Node | null) {
 
     case "TSEnumMember":
       // enum member names, but not their initializers (`enum E { A = B }`)
-      return parent.id !== node;
+      return mode !== "type" && parent.id !== node;
 
-    // type-only positions
+    // references in TypeScript's type namespace
     case "TSTypeReference":
+      // type annotations (`const x: Foo`)
+      return mode !== "value";
+
     case "TSQualifiedName":
+      // the root of a qualified type name (`NS.Inner`)
+      return mode !== "value" && parent.left === node;
+
+    case "TSClassImplements":
+    case "TSInterfaceHeritage":
+      // heritage clauses (`implements Foo`, `extends Bar`)
+      return mode !== "value" && parent.expression === node;
+
+    // type-only positions that are never references
     case "TSTypeParameter":
     case "TSInterfaceDeclaration":
     case "TSTypeAliasDeclaration":
@@ -548,7 +665,19 @@ export function isReferenceIdentifier(node: Node, parent: Node | null) {
       return false;
   }
 
-  return true;
+  return mode !== "type";
+}
+
+export interface IsReferenceIdentifierOptions {
+  /**
+   * Which references to report:
+   * - `'value'`: references to runtime values, e.g. `foo()` or `typeof foo` in a type annotation
+   * - `'type'`: references in type-only positions, e.g. `const x: Foo` or `implements Foo`,
+   * which reference bindings in TypeScript's type namespace rather than runtime values
+   * - `'all'`: both
+   * @default 'value'
+   */
+  mode?: "value" | "type" | "all";
 }
 
 export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctionExpression) {
@@ -750,4 +879,16 @@ export interface ScopeTrackerOptions {
    * @default false
    */
   preserveExitedScopes?: boolean;
+}
+
+export interface ScopeTrackerQueryOptions {
+  /**
+   * Which namespace to check:
+   * - `'value'`: bindings of runtime values (default)
+   * - `'type'`: bindings in TypeScript's type namespace (interfaces, type aliases, type parameters);
+   * declarations available in both namespaces (classes, enums, namespaces, imports) are included in either
+   * - `'all'`: both
+   * @default 'value'
+   */
+  mode?: "value" | "type" | "all";
 }

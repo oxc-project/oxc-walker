@@ -1,5 +1,6 @@
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
+import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
 import {
   getUndeclaredIdentifiersInFunction,
   isReferenceIdentifier,
@@ -600,6 +601,36 @@ describe("scope tracker", () => {
     expect(scopeTracker.isDeclaredInScope("e", "2-0-0")).toBe(true);
   });
 
+  it("should track type declarations in the type namespace", () => {
+    const code = `
+    interface Foo {}
+    type Alias = 1
+    class Klass {}
+    const value = 1
+    `;
+
+    const scopeTracker = new TestScopeTracker({
+      preserveExitedScopes: true,
+    });
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+    });
+
+    expect(scopeTracker.isDeclaredInScope("Foo", "")).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("Foo", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("Alias", "")).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("Alias", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("Klass", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("Klass", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("value", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("value", "", { mode: "type" })).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("value", "", { mode: "all" })).toBe(true);
+  });
+
   it("should freeze scopes", () => {
     let code = `
     const a = 1
@@ -980,12 +1011,21 @@ describe("parsing", () => {
 });
 
 describe("reference identifiers", () => {
-  function getUnmatchedIdentifiers(code: string, sourceFilename = filename): string[] {
+  function getUnmatchedIdentifiers(
+    code: string,
+    sourceFilename = filename,
+    options?: IsReferenceIdentifierOptions,
+  ): string[] {
     const scopeTracker = new ScopeTracker({ preserveExitedScopes: true });
 
     // first pass to collect all declarations and hoist them
     parseAndWalk(code, sourceFilename, { scopeTracker });
     scopeTracker.freeze();
+
+    const modes =
+      options?.mode === "all"
+        ? (["value", "type"] as const)
+        : ([options?.mode ?? "value"] as const);
 
     const unmatched = new Set<string>();
     parseAndWalk(code, sourceFilename, {
@@ -997,12 +1037,17 @@ describe("reference identifiers", () => {
           return;
         }
 
-        if (
-          (node.type === "Identifier" || node.type === "JSXIdentifier") &&
-          isReferenceIdentifier(node, parent) &&
-          !scopeTracker.isDeclared(node.name)
-        ) {
-          unmatched.add(node.name);
+        if (node.type !== "Identifier" && node.type !== "JSXIdentifier") {
+          return;
+        }
+
+        for (const mode of modes) {
+          if (
+            isReferenceIdentifier(node, parent, { mode }) &&
+            !scopeTracker.isDeclared(node.name, { mode })
+          ) {
+            unmatched.add(node.name);
+          }
         }
       },
     });
@@ -1282,6 +1327,119 @@ describe("reference identifiers", () => {
 
     expect(getUnmatchedIdentifiers(code)).toEqual([]);
   });
+
+  it("should declare function overloads and declare functions", () => {
+    const code = `
+    declare function foo(a: number): void
+    function bar(b: string): void
+    function bar(b) { return b }
+    foo(bar)
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare constructor parameter properties", () => {
+    const code = `
+    class C {
+      constructor(private x: number, public y: string) {
+        x; y
+      }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report type-only heritage clauses as references", () => {
+    const code = `
+    class A implements I {}
+    interface B extends C {}
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report accessor property keys as references", () => {
+    const code = `
+    class C {
+      accessor foo = bar;
+      accessor [baz] = 1;
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["bar", "baz"]);
+  });
+
+  it("should declare import equals bindings", () => {
+    const code = `
+    import A = require('mod')
+    A
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should resolve enum member references in initializers", () => {
+    expect(getUnmatchedIdentifiers(`enum E { A, B = A }`)).toEqual([]);
+    expect(getUnmatchedIdentifiers(`enum E { A }\nA`)).toEqual(["A"]);
+  });
+
+  it("should not declare the global identifier from declare global", () => {
+    const code = `
+    declare global { interface Window {} }
+    global
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["global"]);
+  });
+
+  it("should report type-only references depending on the mode", () => {
+    const code = `
+    const x: SomeType = load<OtherType>()
+    class A implements I {}
+    interface B extends C {}
+    type T = NS.Inner
+    type Q = typeof runtimeValue
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["load", "runtimeValue"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual([
+      "C",
+      "I",
+      "NS",
+      "OtherType",
+      "SomeType",
+    ]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([
+      "C",
+      "I",
+      "NS",
+      "OtherType",
+      "SomeType",
+      "load",
+      "runtimeValue",
+    ]);
+  });
+
+  it("should resolve type references to local type declarations", () => {
+    const code = `
+    interface Foo {}
+    type Bar<T> = T | Foo
+    class Klass {}
+    const x: Foo = new Klass()
+    const y: Unknown = 1
+    console.log(Foo)
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["Foo", "console"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["Unknown"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([
+      "Foo",
+      "Unknown",
+      "console",
+    ]);
+  });
 });
 
 export class TestScopeTracker extends ScopeTracker {
@@ -1297,18 +1455,18 @@ export class TestScopeTracker extends ScopeTracker {
     return this.scopeIndexStack;
   }
 
-  isDeclaredInScope(identifier: string, scope: string) {
+  isDeclaredInScope(identifier: string, scope: string, options?: ScopeTrackerQueryOptions) {
     const oldKey = this.scopeIndexKey;
     this.scopeIndexKey = scope;
-    const result = this.isDeclared(identifier);
+    const result = this.isDeclared(identifier, options);
     this.scopeIndexKey = oldKey;
     return result;
   }
 
-  getDeclarationFromScope(identifier: string, scope: string) {
+  getDeclarationFromScope(identifier: string, scope: string, options?: ScopeTrackerQueryOptions) {
     const oldKey = this.scopeIndexKey;
     this.scopeIndexKey = scope;
-    const result = this.getDeclaration(identifier);
+    const result = this.getDeclaration(identifier, options);
     this.scopeIndexKey = oldKey;
     return result;
   }
