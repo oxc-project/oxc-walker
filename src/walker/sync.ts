@@ -39,25 +39,29 @@ export class WalkerSync extends WalkerBase {
   traverse(input: any, key?: keyof Node, index?: number | null, parent?: Node | null): Node | null {
     const ast = input;
     const ctx: WalkerCallbackContext = { key: null, index: index ?? null, ast };
-    const hasScopeTracker = !!this.scopeTracker;
+
+    // perf: store in local variables to prevent repeated property access
+    const scopeTracker = this.scopeTracker;
+    const enter = this.enter;
+    const leave = this.leave;
+    const contextEnter = this.contextEnter;
+    const contextLeave = this.contextLeave;
 
     const _walk = (
-      input: unknown,
+      input: Node,
       parent: Node | null,
       key: keyof Node | null,
       index: number | null,
       skip: boolean,
-    ) => {
-      if (!isNode(input)) {
-        return null;
+    ): Node | null => {
+      if (scopeTracker) {
+        scopeTracker.processNodeEnter(input);
       }
-
-      this.scopeTracker?.processNodeEnter(input);
       let currentNode: Node | null = input;
       let removedInEnter = false;
       let skipChildren = skip;
 
-      if (this.enter && !skip) {
+      if (enter && !skip) {
         const _skip = this._skip;
         const _remove = this._remove;
         const _replacement = this._replacement;
@@ -68,7 +72,7 @@ export class WalkerSync extends WalkerBase {
 
         ctx.key = key;
         ctx.index = index;
-        this.enter.call(this.contextEnter, input, parent, ctx);
+        enter.call(contextEnter, input, parent, ctx);
 
         if (this._replacement && !this._remove) {
           currentNode = this._replacement;
@@ -92,8 +96,12 @@ export class WalkerSync extends WalkerBase {
 
       // walk the child nodes of the current node or the replaced new node
       // (we need to walk everything when scope tracking)
-      if ((!skipChildren || hasScopeTracker) && currentNode) {
+      if ((!skipChildren || scopeTracker) && currentNode) {
         for (const k in currentNode) {
+          // perf: every node has these scalar keys, skip them before loading the value
+          if (k === "type" || k === "start" || k === "end") {
+            continue;
+          }
           const node = currentNode[k as keyof typeof currentNode];
           if (!node || typeof node !== "object") {
             continue;
@@ -109,15 +117,18 @@ export class WalkerSync extends WalkerBase {
                 }
               }
             }
-          } else if (isNode(node)) {
+            // perf: `node.type` check is the only one which hasn't been checked yet. check only that instead of `isNode`
+          } else if (typeof node.type === "string") {
             _walk(node, currentNode, k as keyof Node, null, skipChildren);
           }
         }
       }
 
-      this.scopeTracker?.processNodeLeave(input);
+      if (scopeTracker) {
+        scopeTracker.processNodeLeave(input);
+      }
 
-      if (this.leave && !skip) {
+      if (leave && !skip) {
         const _replacement = this._replacement;
         const _remove = this._remove;
         this._replacement = null;
@@ -125,7 +136,7 @@ export class WalkerSync extends WalkerBase {
 
         ctx.key = key;
         ctx.index = index;
-        this.leave.call(this.contextLeave, input, parent, ctx);
+        leave.call(contextLeave, input, parent, ctx);
 
         if (this._replacement && !this._remove) {
           currentNode = this._replacement;
@@ -148,6 +159,10 @@ export class WalkerSync extends WalkerBase {
       return currentNode;
     };
 
+    // perf: check the root node before walking
+    if (!isNode(input)) {
+      return null;
+    }
     return _walk(input, parent ?? null, key ?? null, index ?? null, false);
   }
 }

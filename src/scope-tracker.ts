@@ -1,12 +1,17 @@
 import type {
   ArrowFunctionExpression,
+  BindingPattern,
+  BindingRestElement,
   CatchClause,
+  FormalParameterRest,
   Function,
   IdentifierReference,
   ImportDeclaration,
   ImportDeclarationSpecifier,
   JSXIdentifier,
   Node,
+  ParamPattern,
+  TSParameterProperty,
   VariableDeclaration,
 } from "@oxc-project/types";
 import type { Identifier } from "./walk";
@@ -16,6 +21,33 @@ export interface ScopeTrackerProtected {
   processNodeEnter: (node: Node) => void;
   processNodeLeave: (node: Node) => void;
 }
+
+const SCOPE_ENTER_TYPES = new Set([
+  "Program",
+  "BlockStatement",
+  "StaticBlock",
+  "TSModuleBlock",
+  "FunctionDeclaration",
+  "FunctionExpression",
+  "ArrowFunctionExpression",
+  "VariableDeclaration",
+  "ClassDeclaration",
+  "ClassExpression",
+  "ImportDeclaration",
+  "TSEnumDeclaration",
+  "TSModuleDeclaration",
+  "TSImportEqualsDeclaration",
+  "TSDeclareFunction",
+  "TSInterfaceDeclaration",
+  "TSTypeAliasDeclaration",
+  "TSTypeParameter",
+  "TSMappedType",
+  "TSEnumBody",
+  "CatchClause",
+  "ForStatement",
+  "ForOfStatement",
+  "ForInStatement",
+]);
 
 /**
  * Tracks variable scopes and identifier declarations within a JavaScript AST.
@@ -69,6 +101,20 @@ export interface ScopeTrackerProtected {
  */
 export class ScopeTracker {
   protected scopeIndexStack: number[] = [];
+  /**
+   * The scope keys of the ancestors of the current scope, one entry per active scope.
+   * `pushScope` pushes the current `scopeIndexKey` before deriving the new one,
+   * and `popScope` restores it from here, so the stack always mirrors the path
+   * from the root scope down to the parent of the current scope.
+   */
+  protected scopeKeyStack: string[] = [];
+  /**
+   * The nodes that created the currently active scopes, one entry per scope.
+   * A node that creates multiple scopes (e.g. `FunctionExpression`) appears once per scope.
+   * This lets `processNodeLeave` detect scope ends with a pointer comparison
+   * instead of checking the node type.
+   */
+  protected scopeOwnerStack: Node[] = [];
   protected scopeIndexKey = "";
   protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
   protected typeScopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
@@ -80,16 +126,20 @@ export class ScopeTracker {
     this.options = options;
   }
 
-  protected updateScopeIndexKey() {
-    this.scopeIndexKey = this.scopeIndexStack.slice(0, -1).join("-");
-  }
-
-  protected pushScope() {
+  protected pushScope(owner: Node) {
+    const depthIndex = this.scopeIndexStack[this.scopeIndexStack.length - 1];
+    this.scopeKeyStack.push(this.scopeIndexKey);
+    this.scopeOwnerStack.push(owner);
     this.scopeIndexStack.push(0);
-    this.updateScopeIndexKey();
+    if (depthIndex !== undefined) {
+      this.scopeIndexKey = this.scopeIndexKey
+        ? `${this.scopeIndexKey}-${depthIndex}`
+        : `${depthIndex}`;
+    }
   }
 
   protected popScope() {
+    this.scopeOwnerStack.pop();
     this.scopeIndexStack.pop();
     if (this.scopeIndexStack[this.scopeIndexStack.length - 1] !== undefined) {
       this.scopeIndexStack[this.scopeIndexStack.length - 1]!++;
@@ -100,7 +150,7 @@ export class ScopeTracker {
       this.typeScopes.delete(this.scopeIndexKey);
     }
 
-    this.updateScopeIndexKey();
+    this.scopeIndexKey = this.scopeKeyStack.pop() ?? "";
   }
 
   protected declareInNamespace(
@@ -133,7 +183,7 @@ export class ScopeTracker {
     }
   }
 
-  protected declareFunctionParameter(param: Node, fn: Function | ArrowFunctionExpression) {
+  protected declareFunctionParameter(param: ParamPattern, fn: Function | ArrowFunctionExpression) {
     if (this.isFrozen) {
       return;
     }
@@ -148,7 +198,7 @@ export class ScopeTracker {
   }
 
   protected declarePattern(
-    pattern: Node,
+    pattern: BindingPattern,
     parent: VariableDeclaration | ArrowFunctionExpression | CatchClause | Function,
   ) {
     if (this.isFrozen) {
@@ -169,12 +219,16 @@ export class ScopeTracker {
   }
 
   protected processNodeEnter: ScopeTrackerProtected["processNodeEnter"] = (node) => {
+    // perf: fast path for the nodes, which do not affect scopes (avoiding unnecessary comparisons)
+    if (!SCOPE_ENTER_TYPES.has(node.type)) {
+      return;
+    }
     switch (node.type) {
       case "Program":
       case "BlockStatement":
       case "StaticBlock":
       case "TSModuleBlock":
-        this.pushScope();
+        this.pushScope(node);
         break;
 
       case "FunctionDeclaration":
@@ -182,7 +236,7 @@ export class ScopeTracker {
         if (node.id?.name) {
           this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey));
         }
-        this.pushScope();
+        this.pushScope(node);
         for (const param of node.params) {
           this.declareFunctionParameter(param, node);
         }
@@ -191,19 +245,19 @@ export class ScopeTracker {
       case "FunctionExpression":
         // make the name of the function available only within the function
         // e.g. const foo = function bar() {  // bar is only available within the function body
-        this.pushScope();
+        this.pushScope(node);
         // can be undefined, for example, in class method definitions
         if (node.id?.name) {
           this.declareIdentifier(node.id.name, new ScopeTrackerFunction(node, this.scopeIndexKey));
         }
 
-        this.pushScope();
+        this.pushScope(node);
         for (const param of node.params) {
           this.declareFunctionParameter(param, node);
         }
         break;
       case "ArrowFunctionExpression":
-        this.pushScope();
+        this.pushScope(node);
         for (const param of node.params) {
           this.declareFunctionParameter(param, node);
         }
@@ -227,14 +281,14 @@ export class ScopeTracker {
         }
         // a scope is pushed for generic classes so that their type parameters do not leak out
         if (node.typeParameters) {
-          this.pushScope();
+          this.pushScope(node);
         }
         break;
 
       case "ClassExpression":
         // make the name of the class available only within the class
         // e.g. const MyClass = class InternalClassName { // InternalClassName is only available within the class body
-        this.pushScope();
+        this.pushScope(node);
         if (node.id?.name) {
           this.declareIdentifier(
             node.id.name,
@@ -280,7 +334,7 @@ export class ScopeTracker {
             new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
           );
         }
-        this.pushScope();
+        this.pushScope(node);
         break;
 
       case "TSInterfaceDeclaration":
@@ -294,7 +348,7 @@ export class ScopeTracker {
             { type: true },
           );
         }
-        this.pushScope();
+        this.pushScope(node);
         break;
 
       case "TSTypeParameter":
@@ -311,7 +365,7 @@ export class ScopeTracker {
       case "TSMappedType":
         // the key of a mapped type declares a type parameter scoped to the mapped type
         // (`{ [K in keyof T]: K }`)
-        this.pushScope();
+        this.pushScope(node);
         this.declareIdentifier(
           node.key.name,
           new ScopeTrackerIdentifier(node.key, this.scopeIndexKey),
@@ -321,7 +375,7 @@ export class ScopeTracker {
 
       case "TSEnumBody":
         // enum members are referencable by name within the enum body
-        this.pushScope();
+        this.pushScope(node);
         for (const member of node.members) {
           if (member.id.type === "Identifier") {
             this.declareIdentifier(
@@ -333,7 +387,7 @@ export class ScopeTracker {
         break;
 
       case "CatchClause":
-        this.pushScope();
+        this.pushScope(node);
         if (node.param) {
           this.declarePattern(node.param, node);
         }
@@ -344,7 +398,7 @@ export class ScopeTracker {
       case "ForInStatement":
         // make the variables defined in for loops available only within the loop
         // e.g. for (let i = 0; i < 10; i++) { // i is only available within the loop block scope
-        this.pushScope();
+        this.pushScope(node);
 
         if (node.type === "ForStatement" && node.init?.type === "VariableDeclaration") {
           for (const decl of node.init.declarations) {
@@ -363,34 +417,11 @@ export class ScopeTracker {
   };
 
   protected processNodeLeave: ScopeTrackerProtected["processNodeLeave"] = (node) => {
-    switch (node.type) {
-      case "Program":
-      case "BlockStatement":
-      case "CatchClause":
-      case "FunctionDeclaration":
-      case "ArrowFunctionExpression":
-      case "StaticBlock":
-      case "TSModuleBlock":
-      case "TSEnumBody":
-      case "TSInterfaceDeclaration":
-      case "TSTypeAliasDeclaration":
-      case "TSDeclareFunction":
-      case "TSMappedType":
-      case "ClassExpression":
-      case "ForStatement":
-      case "ForOfStatement":
-      case "ForInStatement":
-        this.popScope();
-        break;
-      case "FunctionExpression":
-        this.popScope();
-        this.popScope();
-        break;
-      case "ClassDeclaration":
-        if (node.typeParameters) {
-          this.popScope();
-        }
-        break;
+    // pop every scope this node created on enter
+    // perf: a pointer comparison instead of checking `node.type`
+    const owners = this.scopeOwnerStack;
+    while (owners.length > 0 && owners[owners.length - 1] === node) {
+      this.popScope();
     }
   };
 
@@ -398,18 +429,18 @@ export class ScopeTracker {
     scopes: Map<string, Map<string, ScopeTrackerNode>>,
     name: string,
   ): ScopeTrackerNode | null {
-    if (!this.scopeIndexKey) {
-      return scopes.get("")?.get(name) ?? null;
-    }
-
-    const indices = this.scopeIndexKey.split("-").map(Number);
-    for (let i = indices.length; i >= 0; i--) {
-      const node = scopes.get(indices.slice(0, i).join("-"))?.get(name);
+    let key = this.scopeIndexKey;
+    while (true) {
+      const node = scopes.get(key)?.get(name);
       if (node) {
         return node;
       }
+      if (!key) {
+        return null;
+      }
+      const separatorIndex = key.lastIndexOf("-");
+      key = separatorIndex === -1 ? "" : key.slice(0, separatorIndex);
     }
-    return null;
   }
 
   /**
@@ -466,14 +497,18 @@ export class ScopeTracker {
   freeze() {
     this.isFrozen = true;
     this.scopeIndexStack = [];
-    this.updateScopeIndexKey();
+    this.scopeKeyStack = [];
+    this.scopeOwnerStack = [];
+    this.scopeIndexKey = "";
   }
 }
 
-function getPatternIdentifiers(pattern: Node) {
+type Pattern = BindingPattern | BindingRestElement | FormalParameterRest | TSParameterProperty;
+
+function getPatternIdentifiers(pattern: Pattern) {
   const identifiers: Identifier[] = [];
 
-  function collectIdentifiers(pattern: Node) {
+  function collectIdentifiers(pattern: Pattern) {
     switch (pattern.type) {
       case "Identifier":
         identifiers.push(pattern);
@@ -508,6 +543,44 @@ function getPatternIdentifiers(pattern: Node) {
 }
 
 /**
+ * An allocation-free alternative to `getPatternIdentifiers(pattern).includes(node)`
+ */
+function isIdentifierInPattern(pattern: Pattern, node: Node): boolean {
+  switch (pattern.type) {
+    case "Identifier":
+      return pattern === node;
+    case "AssignmentPattern":
+      return isIdentifierInPattern(pattern.left, node);
+    case "RestElement":
+      return isIdentifierInPattern(pattern.argument, node);
+    case "TSParameterProperty":
+      return isIdentifierInPattern(pattern.parameter, node);
+    case "ArrayPattern":
+      for (const element of pattern.elements) {
+        if (
+          element &&
+          isIdentifierInPattern(element.type === "RestElement" ? element.argument : element, node)
+        ) {
+          return true;
+        }
+      }
+      return false;
+    case "ObjectPattern":
+      for (const property of pattern.properties) {
+        if (
+          isIdentifierInPattern(
+            property.type === "RestElement" ? property.argument : property.value,
+            node,
+          )
+        ) {
+          return true;
+        }
+      }
+      return false;
+  }
+}
+
+/**
  * Check if an identifier is in a binding position, where it declares a new variable.
  *
  * Note that identifiers nested in destructuring patterns (`const { a, b = c } = obj`)
@@ -531,12 +604,9 @@ export function isOnlyBindingIdentifier(node: Node, parent: Node | null) {
       if (parent.type !== "ArrowFunctionExpression" && parent.id === node) {
         return true;
       }
-      if (parent.params.length) {
-        for (const param of parent.params) {
-          const identifiers = getPatternIdentifiers(param);
-          if (identifiers.includes(node)) {
-            return true;
-          }
+      for (const param of parent.params) {
+        if (isIdentifierInPattern(param, node)) {
+          return true;
         }
       }
       return false;
@@ -548,14 +618,14 @@ export function isOnlyBindingIdentifier(node: Node, parent: Node | null) {
 
     case "VariableDeclarator":
       // variable name
-      return getPatternIdentifiers(parent.id).includes(node);
+      return isIdentifierInPattern(parent.id, node);
 
     case "CatchClause":
       // catch clause param
       if (!parent.param) {
         return false;
       }
-      return getPatternIdentifiers(parent.param).includes(node);
+      return isIdentifierInPattern(parent.param, node);
 
     case "ImportSpecifier":
       // the local name of an import
@@ -576,7 +646,7 @@ export function isOnlyBindingIdentifier(node: Node, parent: Node | null) {
 
     case "TSParameterProperty":
       // constructor parameter properties (`constructor(private foo) {}`)
-      return getPatternIdentifiers(parent.parameter).includes(node);
+      return isIdentifierInPattern(parent.parameter, node);
   }
 
   return false;
