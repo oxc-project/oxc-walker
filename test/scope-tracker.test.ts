@@ -4,6 +4,7 @@ import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../
 import {
   getUndeclaredIdentifiersInFunction,
   isBindingIdentifier,
+  isOnlyBindingIdentifier,
   isReferenceIdentifier,
   parseAndWalk,
   ScopeTracker,
@@ -1596,6 +1597,7 @@ describe("reference identifiers", () => {
     const identifier = collectNodes("foo").find((n) => n.type === "Identifier");
     assert(identifier);
 
+    expect(isOnlyBindingIdentifier(identifier, null)).toBe(false);
     expect(isBindingIdentifier(identifier, null)).toBe(false);
     expect(isReferenceIdentifier(identifier, null)).toBe(false);
   });
@@ -1612,13 +1614,13 @@ describe("reference identifiers", () => {
       return node;
     };
 
-    expect(isBindingIdentifier(identifier("a"), fn)).toBe(true);
-    expect(isBindingIdentifier(identifier("rest"), fn)).toBe(true);
-    expect(isBindingIdentifier(identifier("renamed"), fn)).toBe(true);
-    expect(isBindingIdentifier(identifier("others"), fn)).toBe(true);
-    expect(isBindingIdentifier(identifier("variadic"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("a"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("rest"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("renamed"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("others"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("variadic"), fn)).toBe(true);
     // property keys are not bindings of the function
-    expect(isBindingIdentifier(identifier("b"), fn)).toBe(false);
+    expect(isOnlyBindingIdentifier(identifier("b"), fn)).toBe(false);
   });
 
   it("should treat constructor parameter properties as bindings of the constructor", () => {
@@ -1627,7 +1629,59 @@ describe("reference identifiers", () => {
     const parameter = nodes.find((n) => n.type === "Identifier" && n.name === "p");
     assert(constructorFn && parameter);
 
-    expect(isBindingIdentifier(parameter, constructorFn)).toBe(true);
+    expect(isOnlyBindingIdentifier(parameter, constructorFn)).toBe(true);
+  });
+
+  // @todo: remove in v2
+  it("should preserve the legacy behavior of the deprecated isBindingIdentifier", () => {
+    const identifiers = new Map<string, { node: Node; parent: Node | null }>();
+    parseAndWalk(
+      `
+      import def, { imp as alias } from 'x'
+      import * as ns from 'y'
+      enum E {}
+      namespace N {}
+      function fn(a) { obj.prop; ({ key: 1, short }); class C { method() {} field = 2 } }
+      `,
+      filename,
+      {
+        enter(node, parent) {
+          if (node.type === "Identifier") {
+            identifiers.set(node.name, { node, parent });
+          }
+        },
+      },
+    );
+    const byName = (name: string) => {
+      const entry = identifiers.get(name);
+      assert(entry);
+      return entry;
+    };
+
+    // binding positions behave the same in both implementations,
+    // including the ones added after the deprecation (imports, enums, namespaces, ...)
+    for (const name of ["fn", "a", "C", "def", "alias", "ns", "E", "N"]) {
+      const { node, parent } = byName(name);
+      expect(isBindingIdentifier(node, parent)).toBe(true);
+      expect(isOnlyBindingIdentifier(node, parent)).toBe(true);
+    }
+
+    // the imported name of `import { imp as alias }` is not a binding
+    const imported = byName("imp");
+    expect(isBindingIdentifier(imported.node, imported.parent)).toBe(false);
+    expect(isOnlyBindingIdentifier(imported.node, imported.parent)).toBe(false);
+
+    // non-reference positions the legacy implementation also reports as bindings
+    for (const name of ["prop", "key", "method", "field"]) {
+      const { node, parent } = byName(name);
+      expect(isBindingIdentifier(node, parent)).toBe(true);
+      expect(isOnlyBindingIdentifier(node, parent)).toBe(false);
+    }
+
+    // shorthand property values are references in both
+    const short = byName("short");
+    expect(isBindingIdentifier(short.node, short.parent)).toBe(false);
+    expect(isOnlyBindingIdentifier(short.node, short.parent)).toBe(false);
   });
 
   it("should not report JSX identifiers in non-JSX positions", () => {

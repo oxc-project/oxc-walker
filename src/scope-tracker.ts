@@ -486,7 +486,7 @@ function getPatternIdentifiers(pattern: Node) {
 /**
  * Check if an identifier is in a binding position, where it declares a new variable.
  */
-export function isBindingIdentifier(node: Node, parent: Node | null) {
+export function isOnlyBindingIdentifier(node: Node, parent: Node | null) {
   if (!parent || node.type !== "Identifier") {
     return false;
   }
@@ -553,6 +553,44 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
   return false;
 }
 
+// @todo: remove in v2
+/**
+ * @deprecated
+ * Despite its name, this function does not check for binding positions only.
+ * It will adopt the strict binding-position behavior of {@link isOnlyBindingIdentifier}
+ * in the next major version. Migrate based on what you need:
+ * - `!isReferenceIdentifier(node, parent)` if you were filtering out variable references
+ *   (the common case)
+ * - `isOnlyBindingIdentifier(node, parent)` if you need actual binding positions
+ */
+export function isBindingIdentifier(node: Node, parent: Node | null) {
+  if (!parent || node.type !== "Identifier") {
+    return false;
+  }
+
+  if (isOnlyBindingIdentifier(node, parent)) {
+    return true;
+  }
+
+  // non-binding, non-reference positions this function historically reported as bindings
+  switch (parent.type) {
+    case "MethodDefinition":
+    case "PropertyDefinition":
+      // class member names
+      return parent.key === node;
+
+    case "Property":
+      // property key if not used as a shorthand
+      return parent.key === node && parent.value !== node;
+
+    case "MemberExpression":
+      // member expression properties
+      return parent.property === node;
+  }
+
+  return false;
+}
+
 /**
  * Check if an identifier is a reference.
  *
@@ -594,7 +632,7 @@ export function isReferenceIdentifier(
     return false;
   }
 
-  if (node.type !== "Identifier" || isBindingIdentifier(node, parent)) {
+  if (node.type !== "Identifier" || isOnlyBindingIdentifier(node, parent)) {
     return false;
   }
 
