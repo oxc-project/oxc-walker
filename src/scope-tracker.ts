@@ -496,7 +496,9 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
     case "FunctionExpression":
     case "ArrowFunctionExpression":
     case "TSDeclareFunction":
+    case "TSEmptyBodyFunctionExpression":
       // function name or parameters
+      // (`TSEmptyBodyFunctionExpression` covers abstract methods, `declare class` methods and overload signatures)
       if (parent.type !== "ArrowFunctionExpression" && parent.id === node) {
         return true;
       }
@@ -608,6 +610,9 @@ export function isReferenceIdentifier(
     case "MethodDefinition":
     case "PropertyDefinition":
     case "AccessorProperty":
+    case "TSAbstractMethodDefinition":
+    case "TSAbstractPropertyDefinition":
+    case "TSAbstractAccessorProperty":
       // computed class member keys, but not `class { foo() {} }`
       return mode !== "type" && (parent.value === node || parent.computed);
 
@@ -662,6 +667,13 @@ export function isReferenceIdentifier(
     case "TSPropertySignature":
     case "TSMethodSignature":
     case "TSIndexSignature":
+      return false;
+
+    // parameter names of function types and signatures (`type F = (foo: string) => void`)
+    case "TSFunctionType":
+    case "TSConstructorType":
+    case "TSCallSignatureDeclaration":
+    case "TSConstructSignatureDeclaration":
       return false;
   }
 
