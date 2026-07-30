@@ -1793,6 +1793,14 @@ describe("reference identifiers", () => {
     ]);
   });
 
+  it("should scope infer declarations to the conditional type", () => {
+    const code = `
+    type ElementType<T> = [T extends (infer U)[] ? U : never, U]
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["U"]);
+  });
+
   it("should detect references in JSX member expressions", () => {
     expect(getUnmatchedIdentifiers(`const el = <Foo.Bar.baz />`, "test.tsx")).toEqual(["Foo"]);
     expect(getUnmatchedIdentifiers(`const el = <foo.bar />`, "test.tsx")).toEqual(["foo"]);

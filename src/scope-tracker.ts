@@ -54,6 +54,7 @@ const SCOPE_ENTER_TYPES = new Set<Node["type"]>([
   "TSConstructSignatureDeclaration",
   "TSFunctionType",
   "TSConstructorType",
+  "TSConditionalType",
   "CatchClause",
   "ForStatement",
   "ForOfStatement",
@@ -256,6 +257,8 @@ export class ScopeTracker {
       case "TSConstructSignatureDeclaration":
       case "TSFunctionType":
       case "TSConstructorType":
+      // `infer` declarations are scoped to the conditional type (`T extends (infer U)[] ? U : never`)
+      case "TSConditionalType":
         this.pushScope(node);
         break;
 
