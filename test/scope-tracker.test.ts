@@ -1655,6 +1655,23 @@ describe("reference identifiers", () => {
     ]);
   });
 
+  it("should report runtime globals and language constants as unresolved references", () => {
+    const code = `
+    const a = undefined ?? NaN ?? Infinity
+    const b = Array.from(console)
+    globalThis.foo
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "Array",
+      "Infinity",
+      "NaN",
+      "console",
+      "globalThis",
+      "undefined",
+    ]);
+  });
+
   it("should detect references in JSX", () => {
     const code = `
     const el = <Foo prop={bar}>{baz}</Foo>
