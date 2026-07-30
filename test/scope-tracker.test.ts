@@ -820,6 +820,44 @@ describe("scope tracker", () => {
     ]);
   });
 
+  it("should not treat sibling scopes with a shared digit prefix as nested", () => {
+    // 11 sibling blocks produce the scope keys '0' through '10'
+    // scope '10' shares the string prefix '1' with scope '1' but is its sibling, not its child
+    const blocks = Array.from({ length: 10 }, (_, i) => `{ const x${i} = ${i} }`).join("\n");
+    const code = `
+    ${blocks}
+    {
+      const x10 = 10
+      {
+        const y = 11
+      }
+    }
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let checked = false;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "Identifier" && node.name === "y") {
+          checked = true;
+          expect(scopeTracker.getCurrentScope()).toBe("10-0");
+          expect(scopeTracker.isCurrentScopeUnder("")).toBe(true);
+          expect(scopeTracker.isCurrentScopeUnder("10")).toBe(true);
+          expect(scopeTracker.isCurrentScopeUnder("1")).toBe(false);
+
+          const declaration = scopeTracker.getDeclaration("x10");
+          assert(declaration);
+          expect(declaration.isUnderScope("")).toBe(true);
+          expect(declaration.isUnderScope("1")).toBe(false);
+        }
+      },
+    });
+
+    expect(checked).toBe(true);
+  });
+
   it("should provide the position of the whole relevant node for declarations", () => {
     const code = `import { imp } from 'mod'
 const a = 1

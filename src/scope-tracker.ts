@@ -892,7 +892,9 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
  * @returns true if scope A is a child of scope B, false otherwise (also when they are the same)
  */
 function isChildScope(a: string, b: string) {
-  return a.startsWith(b) && a.length > b.length;
+  // the segment boundary check prevents sibling scopes sharing a string prefix
+  // (e.g. `10` and `1`) from being treated as nested
+  return a.length > b.length && a.startsWith(b) && (b === "" || a[b.length] === "-");
 }
 
 abstract class BaseNode<T extends Node = Node> {
