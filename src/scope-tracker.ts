@@ -18,6 +18,7 @@ import type { Identifier } from "./walk";
 import { walk } from "./walk";
 
 export interface ScopeTrackerProtected {
+  onWalkStart: (root: Node) => void;
   processNodeEnter: (node: Node) => void;
   processNodeLeave: (node: Node) => void;
 }
@@ -130,6 +131,14 @@ export class ScopeTracker {
   constructor(options: ScopeTrackerOptions = {}) {
     this.options = options;
   }
+
+  protected onWalkStart: ScopeTrackerProtected["onWalkStart"] = (root) => {
+    if (this.scopeIndexStack.length === 0 && root.type !== "Program") {
+      // when the walk does not start at a Program, initialize the root frame
+      // so that the first pushed scope gets its own key instead of the root ""
+      this.scopeIndexStack.push(0);
+    }
+  };
 
   protected pushScope(owner: Node) {
     const depthIndex = this.scopeIndexStack[this.scopeIndexStack.length - 1];

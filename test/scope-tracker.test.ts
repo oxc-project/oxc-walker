@@ -70,6 +70,49 @@ describe("scope tracker", () => {
     expect(scopeTracker.getScopes().size).toBe(2);
   });
 
+  it("should create separate scopes when walking a non-Program root", () => {
+    let fnDecl: Node | undefined;
+    let fnExpr: Node | undefined;
+    parseAndWalk(
+      `
+      function foo(p) { const x = 1 }
+      const f = function bar(q) { const y = 1 }
+      `,
+      filename,
+      {
+        enter(node) {
+          if (node.type === "FunctionDeclaration") {
+            fnDecl = node;
+          } else if (node.type === "FunctionExpression") {
+            fnExpr = node;
+          }
+        },
+      },
+    );
+    assert(fnDecl && fnExpr);
+
+    // when walking a function directly, its name is declared in the root scope,
+    // while the parameters and body get their own child scopes
+    const declTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fnDecl, { scopeTracker: declTracker });
+
+    const declScopes = declTracker.getScopes();
+    expect([...(declScopes.get("")?.keys() ?? [])]).toEqual(["foo"]);
+    expect([...(declScopes.get("0")?.keys() ?? [])]).toEqual(["p"]);
+    expect([...(declScopes.get("0-0")?.keys() ?? [])]).toEqual(["x"]);
+
+    // a function expression pushes a scope for its name as well,
+    // and nothing is declared in the root scope
+    const exprTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fnExpr, { scopeTracker: exprTracker });
+
+    const exprScopes = exprTracker.getScopes();
+    expect(exprScopes.get("")).toBeUndefined();
+    expect([...(exprScopes.get("0")?.keys() ?? [])]).toEqual(["bar"]);
+    expect([...(exprScopes.get("0-0")?.keys() ?? [])]).toEqual(["q"]);
+    expect([...(exprScopes.get("0-0-0")?.keys() ?? [])]).toEqual(["y"]);
+  });
+
   it("should generate scope key correctly and not allocate unnecessary scopes", () => {
     const code = `
     // starting in global scope ("")

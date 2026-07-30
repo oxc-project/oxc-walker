@@ -163,6 +163,9 @@ export class WalkerSync extends WalkerBase {
     if (!isNode(input)) {
       return null;
     }
+    if (scopeTracker) {
+      scopeTracker.onWalkStart(input);
+    }
 
     // perf: without enter/leave handlers no node can be skipped, removed or replaced,
     // so a minimal recursion without the callback bookkeeping is enough
