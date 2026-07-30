@@ -22,7 +22,12 @@ export interface ScopeTrackerProtected {
   processNodeLeave: (node: Node) => void;
 }
 
-const SCOPE_ENTER_TYPES = new Set([
+/**
+ * The node types handled by {@link ScopeTracker.processNodeEnter}.
+ * Must list every `case` of its switch statement; a missing entry silently disables
+ * scope tracking for that node type (see the drift test in `test/scope-tracker.test.ts`).
+ */
+const SCOPE_ENTER_TYPES = new Set<Node["type"]>([
   "Program",
   "BlockStatement",
   "StaticBlock",
@@ -578,6 +583,8 @@ function isIdentifierInPattern(pattern: Pattern, node: Node): boolean {
       }
       return false;
   }
+
+  return false;
 }
 
 /**

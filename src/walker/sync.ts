@@ -168,7 +168,7 @@ export class WalkerSync extends WalkerBase {
     // so a minimal recursion without the callback bookkeeping is enough
     if (scopeTracker && !enter && !leave) {
       const _walkScopesOnly = (input: Node): void => {
-        scopeTracker!.processNodeEnter(input);
+        scopeTracker.processNodeEnter(input);
         for (const k in input) {
           // perf: every node has these scalar keys, skip them before loading the value
           if (k === "type" || k === "start" || k === "end") {
@@ -182,8 +182,13 @@ export class WalkerSync extends WalkerBase {
           if (Array.isArray(node)) {
             for (let i = 0; i < node.length; i++) {
               const child = node[i];
-              if (isNode(child)) {
-                _walkScopesOnly(child);
+              // perf: array elements can be holes (`null`) or non-node objects, so they need
+              // the same guards as the single-value branch below
+              if (!child || typeof child !== "object") {
+                continue;
+              }
+              if (typeof (child as Node).type === "string") {
+                _walkScopesOnly(child as Node);
               }
             }
 
@@ -192,7 +197,7 @@ export class WalkerSync extends WalkerBase {
             _walkScopesOnly(node as Node);
           }
         }
-        scopeTracker!.processNodeLeave(input);
+        scopeTracker.processNodeLeave(input);
       };
 
       _walkScopesOnly(input);
