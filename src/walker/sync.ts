@@ -59,6 +59,7 @@ export class WalkerSync extends WalkerBase {
       }
       let currentNode: Node | null = input;
       let removedInEnter = false;
+      let replacedInEnter = false;
       let skipChildren = skip;
 
       if (enter && !skip) {
@@ -76,6 +77,7 @@ export class WalkerSync extends WalkerBase {
 
         if (this._replacement && !this._remove) {
           currentNode = this._replacement;
+          replacedInEnter = true;
           this.replace(parent, key, index, this._replacement);
           // the walker continues into the replacement's children,
           // so track the declarations and scopes it introduces
@@ -132,8 +134,8 @@ export class WalkerSync extends WalkerBase {
       if (scopeTracker) {
         // when the node was replaced in the enter phase, the scopes of the replacement
         // were pushed on top of the original's, so pop them first
-        if (currentNode && currentNode !== input) {
-          scopeTracker.processNodeLeave(currentNode);
+        if (replacedInEnter) {
+          scopeTracker.processNodeLeave(currentNode!);
         }
         scopeTracker.processNodeLeave(input);
       }
