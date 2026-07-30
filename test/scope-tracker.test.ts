@@ -1728,6 +1728,106 @@ describe("reference identifiers", () => {
   });
 });
 
+describe("optimized scope tracking without callbacks", () => {
+  it("should produce identical scope data to a walk with a no-op callback", () => {
+    const code = `
+    import { imported } from "module"
+    const topLevel = 1
+    const [, holey = imported, ...restOfIt] = [, 2]
+    function outer(param, { destructured, nested: [inArray] }) {
+      const inner = param + topLevel
+      try {
+        inner.toString()
+      }
+      catch (err) {
+        err.toString()
+      }
+      for (const item of []) {
+        item.toString()
+      }
+      return function named() { return inner }
+    }
+    const arrow = (withDefault = 1) => withDefault
+    class Klass {
+      method(methodParam) { return methodParam }
+    }
+    const expr = class NamedExpr {}
+    interface Iface { prop: string }
+    type Alias<T> = T[]
+    enum Enum { A, B }
+    // non-node object and primitive values: \`regex\` of a regexp literal and
+    // \`value\` of template quasis are plain objects without a \`type\`,
+    // a bigint value is a non-object primitive
+    const re = /ab+c/gi
+    const tpl = \`x\${re.source}y\`
+    const big = 10n
+    `;
+
+    const snapshot = (tracker: TestScopeTracker) =>
+      [...tracker.getScopes().entries()].map(([scope, declarations]) => [
+        scope,
+        [...declarations.entries()].map(([name, node]) => `${name}:${node.type}`),
+      ]);
+
+    const fastTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    const { program } = parseAndWalk(code, filename, { scopeTracker: fastTracker });
+
+    const enterTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(program, { scopeTracker: enterTracker, enter() {} });
+
+    const leaveTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(program, { scopeTracker: leaveTracker, leave() {} });
+
+    const expected = snapshot(enterTracker);
+    expect(expected.flatMap(([, declarations]) => declarations).length).toBeGreaterThan(10);
+    expect(snapshot(fastTracker)).toStrictEqual(expected);
+    expect(snapshot(leaveTracker)).toStrictEqual(expected);
+  });
+
+  it("should return the root node", () => {
+    const { program } = parseAndWalk("const a = 1", filename, {});
+    expect(walk(program, { scopeTracker: new ScopeTracker() })).toBe(program);
+  });
+
+  it("should track declarations from array patterns with holes", () => {
+    const code = `const [, second, ...rest] = [, 1, 2, 3]`;
+
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    parseAndWalk(code, filename, { scopeTracker });
+
+    expect(scopeTracker.isDeclaredInScope("second", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("rest", "")).toBe(true);
+  });
+
+  it("should track scopes when walking a non-Program subtree", () => {
+    const code = `
+    function fn(param) {
+      const local = param
+      return local
+    }
+    `;
+
+    let fn: Node | undefined;
+    parseAndWalk(code, filename, {
+      enter(node) {
+        if (node.type === "FunctionDeclaration") {
+          fn = node;
+        }
+      },
+    });
+    assert(fn);
+
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fn, { scopeTracker });
+
+    const declaredNames = [...scopeTracker.getScopes().values()].flatMap((declarations) => [
+      ...declarations.keys(),
+    ]);
+    expect(declaredNames).toContain("param");
+    expect(declaredNames).toContain("local");
+  });
+});
+
 export class TestScopeTracker extends ScopeTracker {
   getScopes() {
     return this.scopes;

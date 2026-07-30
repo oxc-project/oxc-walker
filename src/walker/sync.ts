@@ -163,6 +163,42 @@ export class WalkerSync extends WalkerBase {
     if (!isNode(input)) {
       return null;
     }
+
+    // perf: without enter/leave handlers no node can be skipped, removed or replaced,
+    // so a minimal recursion without the callback bookkeeping is enough
+    if (scopeTracker && !enter && !leave) {
+      const _walkScopesOnly = (input: Node): void => {
+        scopeTracker!.processNodeEnter(input);
+        for (const k in input) {
+          // perf: every node has these scalar keys, skip them before loading the value
+          if (k === "type" || k === "start" || k === "end") {
+            continue;
+          }
+          const node = input[k as keyof typeof input] as unknown;
+          if (!node || typeof node !== "object") {
+            continue;
+          }
+
+          if (Array.isArray(node)) {
+            for (let i = 0; i < node.length; i++) {
+              const child = node[i];
+              if (isNode(child)) {
+                _walkScopesOnly(child);
+              }
+            }
+
+            // perf: `node.type` check is the only one which hasn't been checked yet. check only that instead of `isNode`
+          } else if (typeof (node as Node).type === "string") {
+            _walkScopesOnly(node as Node);
+          }
+        }
+        scopeTracker!.processNodeLeave(input);
+      };
+
+      _walkScopesOnly(input);
+      return input;
+    }
+
     return _walk(input, parent ?? null, key ?? null, index ?? null, false);
   }
 }
