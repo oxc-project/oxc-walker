@@ -1766,6 +1766,33 @@ describe("reference identifiers", () => {
     });
   });
 
+  it("should not leak type parameters of signatures to sibling members", () => {
+    const code = `
+    interface Props {
+      transform<U>(value: U): U
+      fallback: U
+    }
+    type Obj = {
+      method<M>(value: M): M
+      prop: M
+    }
+    type FnPair = [<F>(value: F) => F, F]
+    type CtorPair = [new <C>(value: C) => C, C]
+    interface WithCall {
+      <S>(value: S): S
+      also: S
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual([
+      "C",
+      "F",
+      "M",
+      "S",
+      "U",
+    ]);
+  });
+
   it("should detect references in JSX member expressions", () => {
     expect(getUnmatchedIdentifiers(`const el = <Foo.Bar.baz />`, "test.tsx")).toEqual(["Foo"]);
     expect(getUnmatchedIdentifiers(`const el = <foo.bar />`, "test.tsx")).toEqual(["foo"]);

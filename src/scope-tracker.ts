@@ -49,6 +49,11 @@ const SCOPE_ENTER_TYPES = new Set<Node["type"]>([
   "TSTypeParameter",
   "TSMappedType",
   "TSEnumBody",
+  "TSMethodSignature",
+  "TSCallSignatureDeclaration",
+  "TSConstructSignatureDeclaration",
+  "TSFunctionType",
+  "TSConstructorType",
   "CatchClause",
   "ForStatement",
   "ForOfStatement",
@@ -244,6 +249,13 @@ export class ScopeTracker {
       case "StaticBlock":
       case "SwitchStatement":
       case "TSModuleBlock":
+      // signatures and function types get a scope so that their type parameters
+      // do not leak to sibling members (`interface I { m<T>(x: T): T; prop: T }`)
+      case "TSMethodSignature":
+      case "TSCallSignatureDeclaration":
+      case "TSConstructSignatureDeclaration":
+      case "TSFunctionType":
+      case "TSConstructorType":
         this.pushScope(node);
         break;
 
