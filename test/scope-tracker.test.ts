@@ -943,6 +943,37 @@ class Klass {}
     expect(klass.start).toBe(code.indexOf("Klass"));
     expect(klass.end).toBe(code.indexOf("Klass") + "Klass".length);
   });
+
+  it("should track declarations introduced by replacement nodes", () => {
+    const { program } = parseAndWalk("let replaced = 1", filename, {});
+    const replacement = program.body[0];
+    assert(replacement);
+
+    const code = `
+    let original = 1
+    original
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let referenceCount = 0;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "VariableDeclaration") {
+          this.replace(replacement);
+        }
+        if (node.type === "Identifier" && node.name === "original") {
+          referenceCount++;
+          expect(scopeTracker.isDeclared("replaced")).toBe(true);
+        }
+      },
+    });
+
+    // the walker walks the replacement's children instead of the original declaration,
+    // so the only `original` identifier left is the standalone reference
+    expect(referenceCount).toBe(1);
+  });
 });
 
 describe("parsing", () => {

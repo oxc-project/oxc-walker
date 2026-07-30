@@ -77,6 +77,11 @@ export class WalkerSync extends WalkerBase {
         if (this._replacement && !this._remove) {
           currentNode = this._replacement;
           this.replace(parent, key, index, this._replacement);
+          // the walker continues into the replacement's children,
+          // so track the declarations and scopes it introduces
+          if (scopeTracker) {
+            scopeTracker.processNodeEnter(currentNode);
+          }
         }
 
         if (this._remove) {
@@ -125,6 +130,11 @@ export class WalkerSync extends WalkerBase {
       }
 
       if (scopeTracker) {
+        // when the node was replaced in the enter phase, the scopes of the replacement
+        // were pushed on top of the original's, so pop them first
+        if (currentNode && currentNode !== input) {
+          scopeTracker.processNodeLeave(currentNode);
+        }
         scopeTracker.processNodeLeave(input);
       }
 
