@@ -174,17 +174,49 @@ export class ScopeTracker {
     this.scopeIndexKey = this.scopeKeyStack.pop() ?? "";
   }
 
+  /**
+   * Get the key of the active scope at the given index of the scope stacks.
+   */
+  protected getScopeKeyAt(index: number) {
+    // `scopeKeyStack[i]` holds the key of the parent of the scope at `i`,
+    // so the key of the scope at `index` is the next entry, or the current key at the top
+    return index === this.scopeKeyStack.length - 1
+      ? this.scopeIndexKey
+      : this.scopeKeyStack[index + 1]!;
+  }
+
+  /**
+   * Get the key of the closest function-like scope (function bodies, static blocks,
+   * module blocks and the root scope), which is where `var` declarations are hoisted to.
+   */
+  protected getVarScopeKey(): string {
+    const owners = this.scopeOwnerStack;
+    for (let i = owners.length - 1; i >= 0; i--) {
+      switch (owners[i]!.type) {
+        case "FunctionDeclaration":
+        case "FunctionExpression":
+        case "ArrowFunctionExpression":
+        case "TSDeclareFunction":
+        case "Program":
+        case "StaticBlock":
+        case "TSModuleBlock":
+          return this.getScopeKeyAt(i);
+      }
+    }
+    return "";
+  }
+
   protected declareInNamespace(
     scopes: Map<string, Map<string, ScopeTrackerNode>>,
     name: string,
-    data: ScopeTrackerNode,
+    node: ScopeTrackerNode,
   ) {
-    let scope = scopes.get(this.scopeIndexKey);
+    let scope = scopes.get(node.scope);
     if (!scope) {
       scope = new Map();
-      scopes.set(this.scopeIndexKey, scope);
+      scopes.set(node.scope, scope);
     }
-    scope.set(name, data);
+    scope.set(name, node);
   }
 
   protected declareIdentifier(
@@ -226,15 +258,21 @@ export class ScopeTracker {
       return;
     }
 
+    // `var` declarations are hoisted to the enclosing function-like scope
+    const scopeKey =
+      parent.type === "VariableDeclaration" && parent.kind === "var"
+        ? this.getVarScopeKey()
+        : this.scopeIndexKey;
+
     const identifiers = getPatternIdentifiers(pattern);
     for (const identifier of identifiers) {
       this.declareIdentifier(
         identifier.name,
         parent.type === "VariableDeclaration"
-          ? new ScopeTrackerVariable(identifier, this.scopeIndexKey, parent)
+          ? new ScopeTrackerVariable(identifier, scopeKey, parent)
           : parent.type === "CatchClause"
-            ? new ScopeTrackerCatchParam(identifier, this.scopeIndexKey, parent)
-            : new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, parent),
+            ? new ScopeTrackerCatchParam(identifier, scopeKey, parent)
+            : new ScopeTrackerFunctionParam(identifier, scopeKey, parent),
       );
     }
   }

@@ -1517,6 +1517,67 @@ describe("reference identifiers", () => {
     expect(getUnmatchedIdentifiers(code)).toEqual([]);
   });
 
+  it("should hoist var declarations to the enclosing function scope", () => {
+    const code = `
+    function fn(cond) {
+      if (cond) {
+        var fromBlock = 1
+      }
+      try {
+        var fromTry = 1
+      } catch (e) {
+        var fromCatch = 1
+      }
+      for (var i = 0; i < 1; i++) {}
+      for (var key in {}) {}
+      for (var item of []) {}
+      switch (cond) {
+        case 1:
+          var fromCase = 1
+      }
+      {
+        {
+          var fromNested = 1
+        }
+      }
+      return [fromBlock, fromTry, fromCatch, i, key, item, fromCase, fromNested]
+    }
+    {
+      var topLevel = 1
+    }
+    topLevel
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not hoist var declarations past function boundaries", () => {
+    const code = `
+    function outer() {
+      var inFn = 1
+      const arrow = () => { var inArrow = 1 }
+      function inner() { var inInner = 1 }
+    }
+    class C {
+      static {
+        var inStatic = 1
+      }
+    }
+    namespace N {
+      var inNamespace = 1
+    }
+    inFn; inArrow; inInner; inStatic; inNamespace
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "inArrow",
+      "inFn",
+      "inInner",
+      "inNamespace",
+      "inStatic",
+    ]);
+  });
+
   it("should detect references in JSX", () => {
     const code = `
     const el = <Foo prop={bar}>{baz}</Foo>
