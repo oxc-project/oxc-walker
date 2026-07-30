@@ -131,6 +131,11 @@ export class ScopeTracker {
   protected scopeIndexKey = "";
   protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
   protected typeScopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
+  /**
+   * The implicit `arguments` keyed by the function that introduces them,
+   * so that repeated queries return the same instance.
+   */
+  protected implicitArguments = new WeakMap<Function, ScopeTrackerFunctionArguments>();
 
   protected options: Partial<ScopeTrackerOptions>;
   protected isFrozen = false;
@@ -532,10 +537,32 @@ export class ScopeTracker {
    */
   getDeclaration(name: string, options?: ScopeTrackerQueryOptions): ScopeTrackerNode | null {
     const mode = options?.mode ?? "value";
-    return (
+    const declaration =
       (mode !== "type" ? this.getDeclarationIn(this.scopes, name) : null) ??
-      (mode !== "value" ? this.getDeclarationIn(this.typeScopes, name) : null)
-    );
+      (mode !== "value" ? this.getDeclarationIn(this.typeScopes, name) : null);
+
+    // the implicit `arguments` declaration of the closest regular function applies
+    // unless an explicit declaration shadows it
+    if (name === "arguments" && mode !== "type") {
+      const owners = this.scopeOwnerStack;
+      for (let i = owners.length - 1; i >= 0; i--) {
+        const owner = owners[i]!;
+        if (owner.type === "FunctionDeclaration" || owner.type === "FunctionExpression") {
+          const fnScope = this.getScopeKeyAt(i);
+          if (!declaration || isChildScope(fnScope, declaration.scope)) {
+            let implicit = this.implicitArguments.get(owner);
+            if (!implicit) {
+              implicit = new ScopeTrackerFunctionArguments(owner, fnScope);
+              this.implicitArguments.set(owner, implicit);
+            }
+            return implicit;
+          }
+          break;
+        }
+      }
+    }
+
+    return declaration;
   }
 
   /**
@@ -1044,6 +1071,18 @@ export class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpre
   }
 }
 
+export class ScopeTrackerFunctionArguments extends BaseNode<Function> {
+  type = "FunctionArguments" as const;
+
+  get start() {
+    return this.node.start;
+  }
+
+  get end() {
+    return this.node.end;
+  }
+}
+
 export class ScopeTrackerVariable extends BaseNode<Identifier> {
   type = "Variable" as const;
   variableNode: VariableDeclaration;
@@ -1101,6 +1140,7 @@ export class ScopeTrackerCatchParam extends BaseNode {
 export type ScopeTrackerNode =
   | ScopeTrackerFunctionParam
   | ScopeTrackerFunction
+  | ScopeTrackerFunctionArguments
   | ScopeTrackerVariable
   | ScopeTrackerIdentifier
   | ScopeTrackerImport

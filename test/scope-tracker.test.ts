@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
-import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
+import type {
+  IsReferenceIdentifierOptions,
+  ScopeTrackerNode,
+  ScopeTrackerQueryOptions,
+} from "../src";
 import {
   getUndeclaredIdentifiersInFunction,
   isBindingIdentifier,
@@ -1111,6 +1115,79 @@ describe("parsing", () => {
     });
 
     expect(processedFunctions).toBe(5);
+  });
+
+  it("should treat the implicitly bound arguments as declared in a function", () => {
+    let fn: Node | undefined;
+    parseAndWalk(`const f = function () { return arguments.length }`, filename, {
+      enter(node) {
+        if (node.type === "FunctionExpression") {
+          fn = node;
+        }
+      },
+    });
+    assert(fn?.type === "FunctionExpression");
+
+    // `arguments` is implicitly declared in regular functions
+    expect(getUndeclaredIdentifiersInFunction(fn)).toEqual([]);
+
+    let arrow: Node | undefined;
+    parseAndWalk(`const arrow = () => arguments.length`, filename, {
+      enter(node) {
+        if (node.type === "ArrowFunctionExpression") {
+          arrow = node;
+        }
+      },
+    });
+    assert(arrow?.type === "ArrowFunctionExpression");
+
+    // arrow functions don't declare `arguments`
+    expect(getUndeclaredIdentifiersInFunction(arrow)).toEqual(["arguments"]);
+
+    // an explicit declaration shadows the implicit `arguments`
+    const scopeTracker = new ScopeTracker();
+    let beforeDeclaration: ScopeTrackerNode | null | undefined;
+    let shadowed: ScopeTrackerNode | null | undefined;
+    parseAndWalk(
+      `const f = function () {
+        const before = 1
+        let arguments = 42
+        return arguments
+      }`,
+      filename,
+      {
+        scopeTracker,
+        enter(node) {
+          if (node.type === "Identifier" && node.name === "before") {
+            beforeDeclaration = scopeTracker.getDeclaration("arguments");
+            expect(scopeTracker.getDeclaration("arguments")).toBe(beforeDeclaration);
+          } else if (node.type === "ReturnStatement") {
+            shadowed = scopeTracker.getDeclaration("arguments");
+          }
+        },
+      },
+    );
+
+    // the function itself defines `arguments`, so it is already declared before the explicit declaration
+    assert(beforeDeclaration);
+    expect(beforeDeclaration.type).toBe("FunctionArguments");
+
+    // after the explicit declaration, it resolves to the explicit binding
+    assert(shadowed instanceof ScopeTrackerVariable);
+    expect(shadowed.node.name).toBe("arguments");
+
+    // a parameter named `arguments` shadows the implicit binding as well
+    const paramScopeTracker = new ScopeTracker();
+    let param: ScopeTrackerNode | null | undefined;
+    parseAndWalk(`const f = function (arguments) { return arguments }`, filename, {
+      scopeTracker: paramScopeTracker,
+      enter(node) {
+        if (node.type === "ReturnStatement") {
+          param = paramScopeTracker.getDeclaration("arguments");
+        }
+      },
+    });
+    assert(param instanceof ScopeTrackerFunctionParam);
   });
 
   it("should correctly compare identifiers defined in different scopes", () => {
