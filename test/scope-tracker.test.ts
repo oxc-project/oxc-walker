@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
 import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
@@ -1825,6 +1826,50 @@ describe("optimized scope tracking without callbacks", () => {
     ]);
     expect(declaredNames).toContain("param");
     expect(declaredNames).toContain("local");
+  });
+
+  it("should keep the scope enter fast path in sync with the node types it guards", () => {
+    const source = readFileSync(new URL("../src/scope-tracker.ts", import.meta.url), "utf8");
+    const { program } = parseAndWalk(source, "scope-tracker.ts", {});
+
+    const guardedTypes = new Set<string>();
+    const handledTypes = new Set<string>();
+
+    walk(program, {
+      enter(node) {
+        if (
+          node.type === "VariableDeclarator" &&
+          node.id.type === "Identifier" &&
+          node.id.name === "SCOPE_ENTER_TYPES"
+        ) {
+          assert(node.init?.type === "NewExpression");
+          const [elements] = node.init.arguments;
+          assert(elements?.type === "ArrayExpression");
+          for (const element of elements.elements) {
+            assert(element?.type === "Literal" && typeof element.value === "string");
+            guardedTypes.add(element.value);
+          }
+        }
+
+        if (
+          node.type === "PropertyDefinition" &&
+          node.key.type === "Identifier" &&
+          node.key.name === "processNodeEnter"
+        ) {
+          walk(node, {
+            enter(inner) {
+              if (inner.type === "SwitchCase" && inner.test?.type === "Literal") {
+                assert(typeof inner.test.value === "string");
+                handledTypes.add(inner.test.value);
+              }
+            },
+          });
+        }
+      },
+    });
+
+    expect(handledTypes.size).toBeGreaterThan(20);
+    expect([...guardedTypes].sort()).toEqual([...handledTypes].sort());
   });
 });
 

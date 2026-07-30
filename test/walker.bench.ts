@@ -6,10 +6,17 @@ import { isReferenceIdentifier, parseAndWalk, ScopeTracker, walk } from "../src"
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 
-const code = readFileSync(
-  join(rootDir, "node_modules/@vue/compiler-sfc/dist/compiler-sfc.esm-browser.js"),
-  "utf8",
-);
+const fixture = join(rootDir, "node_modules/@vue/compiler-sfc/dist/compiler-sfc.esm-browser.js");
+
+let code: string;
+try {
+  code = readFileSync(fixture, "utf8");
+} catch (error) {
+  throw new Error(
+    `Could not read the benchmark fixture at ${fixture}. Run \`vp install\` to install \`@vue/compiler-sfc\`, or update the path if its dist filenames have changed.`,
+    { cause: error },
+  );
+}
 
 const { program } = parseAndWalk(code, "compiler-sfc.js", {});
 
