@@ -53,6 +53,7 @@ const SCOPE_ENTER_TYPES = new Set<Node["type"]>([
   "ForStatement",
   "ForOfStatement",
   "ForInStatement",
+  "SwitchStatement",
 ]);
 
 /**
@@ -241,6 +242,7 @@ export class ScopeTracker {
       case "Program":
       case "BlockStatement":
       case "StaticBlock":
+      case "SwitchStatement":
       case "TSModuleBlock":
         this.pushScope(node);
         break;

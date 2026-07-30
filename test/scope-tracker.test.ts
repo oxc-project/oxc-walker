@@ -1346,6 +1346,22 @@ describe("reference identifiers", () => {
     expect(getUnmatchedIdentifiers(code)).toEqual(["e1", "p1", "p2"]);
   });
 
+  it("should scope declarations in switch cases to the switch body", () => {
+    const code = `
+    const input = 1
+    switch (input) {
+      case 1:
+        let leaked = 1
+        break
+      default:
+        leaked = 2
+    }
+    const after = leaked
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["leaked"]);
+  });
+
   it("should resolve references to imports", () => {
     const code = `
     import { Bar } from 'foobar'
