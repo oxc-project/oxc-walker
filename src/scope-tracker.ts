@@ -225,6 +225,10 @@ export class ScopeTracker {
             { value: true, type: true },
           );
         }
+        // a scope is pushed for generic classes so that their type parameters do not leak out
+        if (node.typeParameters) {
+          this.pushScope();
+        }
         break;
 
       case "ClassExpression":
@@ -268,13 +272,15 @@ export class ScopeTracker {
         break;
 
       case "TSDeclareFunction":
-        // `declare function` and function overload signatures declare a value binding
+        // `declare function` and function overload signatures declare a value binding;
+        // a scope is pushed so that their type parameters do not leak out
         if (node.id?.name) {
           this.declareIdentifier(
             node.id.name,
             new ScopeTrackerIdentifier(node.id, this.scopeIndexKey),
           );
         }
+        this.pushScope();
         break;
 
       case "TSInterfaceDeclaration":
@@ -300,6 +306,17 @@ export class ScopeTracker {
             { type: true },
           );
         }
+        break;
+
+      case "TSMappedType":
+        // the key of a mapped type declares a type parameter scoped to the mapped type
+        // (`{ [K in keyof T]: K }`)
+        this.pushScope();
+        this.declareIdentifier(
+          node.key.name,
+          new ScopeTrackerIdentifier(node.key, this.scopeIndexKey),
+          { type: true },
+        );
         break;
 
       case "TSEnumBody":
@@ -357,6 +374,8 @@ export class ScopeTracker {
       case "TSEnumBody":
       case "TSInterfaceDeclaration":
       case "TSTypeAliasDeclaration":
+      case "TSDeclareFunction":
+      case "TSMappedType":
       case "ClassExpression":
       case "ForStatement":
       case "ForOfStatement":
@@ -366,6 +385,11 @@ export class ScopeTracker {
       case "FunctionExpression":
         this.popScope();
         this.popScope();
+        break;
+      case "ClassDeclaration":
+        if (node.typeParameters) {
+          this.popScope();
+        }
         break;
     }
   };
@@ -485,6 +509,11 @@ function getPatternIdentifiers(pattern: Node) {
 
 /**
  * Check if an identifier is in a binding position, where it declares a new variable.
+ *
+ * Note that identifiers nested in destructuring patterns (`const { a, b = c } = obj`)
+ * cannot be resolved from the direct parent alone; this function returns `false` for them
+ * and {@link isReferenceIdentifier} reports them as references.
+ * Pair these functions with a {@link ScopeTracker} to resolve such identifiers correctly.
  */
 export function isOnlyBindingIdentifier(node: Node, parent: Node | null) {
   if (!parent || node.type !== "Identifier") {
@@ -602,6 +631,10 @@ export function isBindingIdentifier(node: Node, parent: Node | null) {
  * The two are indistinguishable from the specifier alone, as the `source` lives
  * on the parent `ExportNamedDeclaration`.
  * Skip re-export declarations during the walk to avoid the false positives.
+ *
+ * Identifiers nested in destructuring patterns (`const { a, b = c } = obj`) are also
+ * indistinguishable from references based on the direct parent alone and are reported
+ * as references. Pair this function with a {@link ScopeTracker} to resolve them correctly.
  */
 export function isReferenceIdentifier(
   node: Node,
@@ -683,6 +716,10 @@ export function isReferenceIdentifier(
     case "TSEnumMember":
       // enum member names, but not their initializers (`enum E { A = B }`)
       return mode !== "type" && parent.id !== node;
+
+    case "TSMappedType":
+      // the key of a mapped type declares a type parameter (`{ [K in keyof T]: K }`)
+      return false;
 
     // references in TypeScript's type namespace
     case "TSTypeReference":

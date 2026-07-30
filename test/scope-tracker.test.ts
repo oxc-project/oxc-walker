@@ -1572,6 +1572,40 @@ describe("reference identifiers", () => {
     ).toEqual([]);
   });
 
+  it("should declare mapped type keys and not report them as references", () => {
+    const code = `
+    type X = { [K in keyof Y]: K }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["Y"]);
+  });
+
+  it("should not leak type parameters out of their declarations", () => {
+    const code = `
+    class Foo<T> {
+      method(value: T): T { return value }
+    }
+    declare function df<U>(x: U): U
+    interface Bar<V> { prop: V }
+    const marker = 1
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([]);
+
+    const scopeTracker = new ScopeTracker();
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "VariableDeclaration") {
+          for (const name of ["T", "U", "V"]) {
+            expect(scopeTracker.isDeclared(name, { mode: "all" })).toBe(false);
+          }
+        }
+      },
+    });
+  });
+
   it("should detect references in JSX member expressions", () => {
     expect(getUnmatchedIdentifiers(`const el = <Foo.Bar.baz />`, "test.tsx")).toEqual(["Foo"]);
     expect(getUnmatchedIdentifiers(`const el = <foo.bar />`, "test.tsx")).toEqual(["foo"]);
