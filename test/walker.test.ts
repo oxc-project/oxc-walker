@@ -841,4 +841,180 @@ describe("oxc-walker", () => {
       ]
     `);
   });
+
+  function getWalkedNodeStrings(node: Node) {
+    const walkedNodes: string[] = [];
+    walk(node, {
+      enter(node) {
+        walkedNodes.push(getNodeString(node));
+      },
+    });
+    return walkedNodes;
+  }
+
+  it("ignores non-node input", () => {
+    const walkedNodes: string[] = [];
+    const result = walk({ answer: 42 } as unknown as Node, {
+      enter(node) {
+        walkedNodes.push(getNodeString(node));
+      },
+    });
+
+    expect(result).toBeNull();
+    expect(walkedNodes).toEqual([]);
+  });
+
+  it("removes the root node and returns null", () => {
+    const ast: Node = { type: "Identifier", name: "x", start: 0, end: 1 };
+
+    const result = walk(ast, {
+      enter() {
+        this.remove();
+      },
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("returns the replacement when the root node is removed in enter and replaced in leave", () => {
+    const ast: Node = { type: "Identifier", name: "x", start: 0, end: 1 };
+    const replacement: Node = { type: "Literal", value: 1, raw: "1", start: 0, end: 1 };
+
+    const result = walk(ast, {
+      enter() {
+        this.remove();
+      },
+      leave(node) {
+        if (node.type === "Identifier") {
+          this.replace(replacement);
+        }
+      },
+    });
+
+    expect(result).toBe(replacement);
+  });
+
+  it("replaces nodes at non-array positions", () => {
+    const { program } = parseAndWalk("const a = 1", "test.js", {
+      enter(node) {
+        if (node.type === "Literal") {
+          this.replace({ ...node, value: 2, raw: "2" });
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "VariableDeclaration",
+      "VariableDeclarator",
+      "Identifier:a",
+      "Literal:2",
+    ]);
+  });
+
+  it("removes nodes at non-array positions", () => {
+    const { program } = parseAndWalk("const a = 1", "test.js", {
+      enter(node) {
+        if (node.type === "Literal") {
+          this.remove();
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "VariableDeclaration",
+      "VariableDeclarator",
+      "Identifier:a",
+    ]);
+  });
+
+  it("supports replacing nodes in leave", () => {
+    const { program } = parseAndWalk('console.log("hello world")', "test.js", {
+      leave(node) {
+        if (node.type === "Literal") {
+          this.replace({ ...node, value: "replaced" });
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "ExpressionStatement",
+      "CallExpression",
+      "MemberExpression",
+      "Identifier:console",
+      "Identifier:log",
+      "Literal:replaced",
+    ]);
+  });
+
+  it("supports removing nodes in leave", () => {
+    const { program } = parseAndWalk("let a, b, c", "test.js", {
+      leave(node) {
+        if (
+          node.type === "VariableDeclarator" &&
+          node.id.type === "Identifier" &&
+          node.id.name !== "c"
+        ) {
+          this.remove();
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "VariableDeclaration",
+      "VariableDeclarator",
+      "Identifier:c",
+    ]);
+  });
+
+  it("inserts the replacement when a node removed in enter is replaced in leave", () => {
+    const { program } = parseAndWalk('console.log("hello world")', "test.js", {
+      enter(node) {
+        if (node.type === "Literal") {
+          this.remove();
+        }
+      },
+      leave(node) {
+        if (node.type === "Literal") {
+          this.replace({ ...node, value: "restored" });
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "ExpressionStatement",
+      "CallExpression",
+      "MemberExpression",
+      "Identifier:console",
+      "Identifier:log",
+      "Literal:restored",
+    ]);
+  });
+
+  it("inserts the replacement at non-array positions when removed in enter and replaced in leave", () => {
+    const { program } = parseAndWalk("const a = 1", "test.js", {
+      enter(node) {
+        if (node.type === "Literal") {
+          this.remove();
+        }
+      },
+      leave(node) {
+        if (node.type === "Literal") {
+          this.replace({ ...node, value: 2, raw: "2" });
+        }
+      },
+    });
+
+    expect(getWalkedNodeStrings(program)).toEqual([
+      "Program",
+      "VariableDeclaration",
+      "VariableDeclarator",
+      "Identifier:a",
+      "Literal:2",
+    ]);
+  });
 });

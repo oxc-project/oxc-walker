@@ -1,6 +1,21 @@
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
-import { getUndeclaredIdentifiersInFunction, parseAndWalk, ScopeTracker, walk } from "../src";
+import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
+import {
+  getUndeclaredIdentifiersInFunction,
+  isBindingIdentifier,
+  isOnlyBindingIdentifier,
+  isReferenceIdentifier,
+  parseAndWalk,
+  ScopeTracker,
+  ScopeTrackerCatchParam,
+  ScopeTrackerFunction,
+  ScopeTrackerFunctionParam,
+  ScopeTrackerIdentifier,
+  ScopeTrackerImport,
+  ScopeTrackerVariable,
+  walk,
+} from "../src";
 
 function getNodeString(node: Node) {
   const parts: string[] = [node.type];
@@ -460,6 +475,68 @@ describe("scope tracker", () => {
     expect(scopeTracker.getScopes().get("")?.size).toBe(3);
   });
 
+  it("should resolve identifiers used as switch case labels", () => {
+    const code = `
+    import { foo } from './foo'
+    const bar = 1
+    function baz() {}
+    class Qux {}
+
+    switch (input) {
+      case foo:
+        break
+      case bar:
+        break
+      case baz:
+        break
+      case Qux:
+        break
+      case nope:
+        break
+    }
+    `;
+
+    const scopeTracker = new TestScopeTracker({
+      preserveExitedScopes: true,
+    });
+
+    let processedCases = 0;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter: (node) => {
+        if (node.type !== "SwitchCase" || node.test?.type !== "Identifier") {
+          return;
+        }
+
+        const declaration = scopeTracker.getDeclaration(node.test.name);
+        switch (node.test.name) {
+          case "foo":
+            expect(declaration?.type).toEqual("Import");
+            break;
+          case "bar":
+            expect(declaration?.type).toEqual("Variable");
+            break;
+          case "baz":
+            expect(declaration?.type).toEqual("Function");
+            break;
+          case "Qux":
+            expect(declaration?.type).toEqual("Identifier");
+            break;
+          case "nope":
+            expect(declaration).toBeNull();
+            break;
+          default:
+            assert.fail(`Unexpected switch case label: ${node.test.name}`);
+        }
+
+        processedCases++;
+      },
+    });
+
+    expect(processedCases).toBe(5);
+  });
+
   it("should handle classes", () => {
     const code = `
     // ""
@@ -530,6 +607,36 @@ describe("scope tracker", () => {
     expect(scopeTracker.isDeclaredInScope("d", "2-0-0")).toBe(false);
     expect(scopeTracker.isDeclaredInScope("d", "")).toBe(false);
     expect(scopeTracker.isDeclaredInScope("e", "2-0-0")).toBe(true);
+  });
+
+  it("should track type declarations in the type namespace", () => {
+    const code = `
+    interface Foo {}
+    type Alias = 1
+    class Klass {}
+    const value = 1
+    `;
+
+    const scopeTracker = new TestScopeTracker({
+      preserveExitedScopes: true,
+    });
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+    });
+
+    expect(scopeTracker.isDeclaredInScope("Foo", "")).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("Foo", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("Alias", "")).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("Alias", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("Klass", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("Klass", "", { mode: "type" })).toBe(true);
+
+    expect(scopeTracker.isDeclaredInScope("value", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("value", "", { mode: "type" })).toBe(false);
+    expect(scopeTracker.isDeclaredInScope("value", "", { mode: "all" })).toBe(true);
   });
 
   it("should freeze scopes", () => {
@@ -680,6 +787,79 @@ describe("scope tracker", () => {
         "leave:Program",
       ]
     `);
+  });
+
+  it("should report the current scope and its relation to parent scopes", () => {
+    const code = `
+    const a = 1
+    function foo() {
+      const b = 2
+    }
+    `;
+
+    const scopeTracker = new TestScopeTracker();
+    const observed: Array<[string, boolean, boolean]> = [];
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "VariableDeclaration") {
+          observed.push([
+            scopeTracker.getCurrentScope(),
+            scopeTracker.isCurrentScopeUnder("0"),
+            scopeTracker.isCurrentScopeUnder("0-0"),
+          ]);
+        }
+      },
+    });
+
+    expect(observed).toEqual([
+      ["", false, false],
+      ["0-0", true, false],
+    ]);
+  });
+
+  it("should provide the position of the whole relevant node for declarations", () => {
+    const code = `import { imp } from 'mod'
+const a = 1
+function foo(param) {}
+try {} catch (err) {}
+class Klass {}
+`;
+
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true });
+
+    parseAndWalk(code, filename, { scopeTracker });
+
+    const imp = scopeTracker.getDeclarationFromScope("imp", "");
+    assert(imp instanceof ScopeTrackerImport);
+    expect(imp.start).toBe(0);
+    expect(imp.end).toBe(code.indexOf("'mod'") + "'mod'".length);
+
+    const a = scopeTracker.getDeclarationFromScope("a", "");
+    assert(a instanceof ScopeTrackerVariable);
+    expect(a.start).toBe(code.indexOf("const a"));
+    expect(a.end).toBe(code.indexOf("const a") + "const a = 1".length);
+
+    const foo = scopeTracker.getDeclarationFromScope("foo", "");
+    assert(foo instanceof ScopeTrackerFunction);
+    expect(foo.start).toBe(code.indexOf("function foo"));
+    expect(foo.end).toBe(code.indexOf("function foo") + "function foo(param) {}".length);
+
+    const param = scopeTracker.getDeclarationFromScope("param", "0");
+    assert(param instanceof ScopeTrackerFunctionParam);
+    expect(param.start).toBe(foo.start);
+    expect(param.end).toBe(foo.end);
+
+    const err = scopeTracker.getDeclarationFromScope("err", "2");
+    assert(err instanceof ScopeTrackerCatchParam);
+    expect(err.start).toBe(code.indexOf("catch"));
+    expect(err.end).toBe(code.indexOf("catch") + "catch (err) {}".length);
+
+    const klass = scopeTracker.getDeclarationFromScope("Klass", "");
+    assert(klass instanceof ScopeTrackerIdentifier);
+    expect(klass.start).toBe(code.indexOf("Klass"));
+    expect(klass.end).toBe(code.indexOf("Klass") + "Klass".length);
   });
 });
 
@@ -874,6 +1054,678 @@ describe("parsing", () => {
     expect(b.isUnderScope(d.scope)).toBe(false);
     expect(c.isUnderScope(e.scope)).toBe(false);
   });
+
+  it("should treat identifiers in switch case tests as references", () => {
+    const code = `
+    function handle(input) {
+      const foo = 1
+
+      switch (input) {
+        case foo:
+          return 1
+        case bar:
+          return 2
+        default:
+          return 0
+      }
+    }
+    `;
+
+    let processedFunctions = 0;
+
+    parseAndWalk(code, filename, {
+      enter: (node) => {
+        if (node.type !== "FunctionDeclaration") {
+          return;
+        }
+
+        // `input` and `foo` are declared within the function,
+        // while `bar` is a reference to an identifier outside of it
+        expect(getUndeclaredIdentifiersInFunction(node)).toEqual(["bar"]);
+
+        processedFunctions++;
+      },
+    });
+
+    expect(processedFunctions).toBe(1);
+  });
+});
+
+describe("reference identifiers", () => {
+  function getUnmatchedIdentifiers(
+    code: string,
+    sourceFilename = filename,
+    options?: IsReferenceIdentifierOptions,
+  ): string[] {
+    const scopeTracker = new ScopeTracker({ preserveExitedScopes: true });
+
+    // first pass to collect all declarations and hoist them
+    parseAndWalk(code, sourceFilename, { scopeTracker });
+    scopeTracker.freeze();
+
+    const modes =
+      options?.mode === "all"
+        ? (["value", "type"] as const)
+        : ([options?.mode ?? "value"] as const);
+
+    const unmatched = new Set<string>();
+    parseAndWalk(code, sourceFilename, {
+      scopeTracker,
+      enter(node, parent) {
+        // re-export specifiers refer to the other module's exports
+        if (node.type === "ExportNamedDeclaration" && node.source) {
+          this.skip();
+          return;
+        }
+
+        if (node.type !== "Identifier" && node.type !== "JSXIdentifier") {
+          return;
+        }
+
+        for (const mode of modes) {
+          if (
+            isReferenceIdentifier(node, parent, { mode }) &&
+            !scopeTracker.isDeclared(node.name, { mode })
+          ) {
+            unmatched.add(node.name);
+          }
+        }
+      },
+    });
+
+    return [...unmatched].sort();
+  }
+
+  it("should detect references in statements", () => {
+    const code = `
+    switch (input) {
+      case ref1:
+        break
+    }
+
+    function fn1() {
+      return ref2
+    }
+    function fn2() {
+      throw ref3
+    }
+    function fn3(p1 = ref4) {
+      return p1
+    }
+
+    for (const i of ref5) {}
+    for (const i in ref6) {}
+
+    export default ref7
+
+    const [d1 = ref8] = []
+    const { d2 = ref9 } = {}
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "input",
+      "ref1",
+      "ref2",
+      "ref3",
+      "ref4",
+      "ref5",
+      "ref6",
+      "ref7",
+      "ref8",
+      "ref9",
+    ]);
+  });
+
+  it("should not report identifiers declared via patterns and params", () => {
+    const code = `
+    const [a1 = 1] = []
+    const { a2 = 1, ...a3 } = {}
+    try {} catch (e1) { e1() }
+    function fn1({ p1 }, [p2], p3 = 1, ...p4) {
+      p1(); p2(); p3(); p4()
+    }
+    const fn2 = ({ p5 }) => p5()
+    a1(); a2(); a3()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not leak params and catch bindings to the enclosing scope", () => {
+    const code = `
+    const fn1 = ({ p1 }) => p1()
+    function fn2(p2) { p2() }
+    try {} catch ({ e1 }) { e1() }
+    p1(); p2(); e1()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["e1", "p1", "p2"]);
+  });
+
+  it("should resolve references to imports", () => {
+    const code = `
+    import { Bar } from 'foobar'
+    function foo(mode) {
+      switch (mode) {
+        case Foo:
+          return Bar
+      }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["Foo"]);
+  });
+
+  it("should detect references in computed member expressions", () => {
+    const code = `
+    obj[ref1]
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["obj", "ref1"]);
+  });
+
+  it("should detect references in computed keys", () => {
+    const code = `
+    const obj = { [ref1]: 1 }
+    class C1 {
+      [ref2] = ref3;
+      [ref4]() {}
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["ref1", "ref2", "ref3", "ref4"]);
+  });
+
+  it("should not report re-export specifiers as references", () => {
+    const code = `
+    export { ref1 } from './one'
+    export { ref2 as ref3 } from './two'
+    export * as ref4 from './three'
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should detect renamed imports", () => {
+    const code = `
+    import { a as b } from 'x'
+    b()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report statement labels as references", () => {
+    const code = `
+    outer: for (const i of list) {
+      if (i) break outer
+      continue outer
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["list"]);
+  });
+
+  it("should not report type-only identifiers as references", () => {
+    const code = `
+    const x: SomeType = load<OtherType>()
+    interface Foo { bar: Baz }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["load"]);
+  });
+
+  it("should detect references in expression positions", () => {
+    const code = `
+    const obj = { foo }
+    class A extends Base {}
+    typeof ref1
+    const sum = ref2 + ref3
+    const pick = cond ? ref4 : ref5
+    const arr = [...ref6]
+    const fn = async () => await ref7
+    const tpl = tag\`\${ref8}\`
+    const inst = new Ctor()
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "Base",
+      "Ctor",
+      "cond",
+      "foo",
+      "ref1",
+      "ref2",
+      "ref3",
+      "ref4",
+      "ref5",
+      "ref6",
+      "ref7",
+      "ref8",
+      "tag",
+    ]);
+  });
+
+  it("should detect references in assignment targets", () => {
+    const code = `
+    ref1 = 1
+    ref2++
+    ;({ a: ref3 } = obj)
+    ;[ref4] = arr
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["arr", "obj", "ref1", "ref2", "ref3", "ref4"]);
+  });
+
+  it("should not report non-computed keys and members as references", () => {
+    const code = `
+    obj.prop
+    const x = { key: 1 }
+    class C {
+      method() {}
+      get accessor() { return 1 }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["obj"]);
+  });
+
+  it("should report export specifiers without a source as references", () => {
+    const code = `
+    const foo = 1
+    export { foo, bar }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["bar"]);
+  });
+
+  it("should detect references in computed pattern keys", () => {
+    const code = `
+    const { [key]: value } = obj
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["key", "obj"]);
+  });
+
+  it("should resolve references to hoisted declarations", () => {
+    const code = `
+    foo()
+    bar
+    function foo() {}
+    var bar = 1
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should detect references in JSX", () => {
+    const code = `
+    const el = <Foo prop={bar}>{baz}</Foo>
+    `;
+
+    expect(getUnmatchedIdentifiers(code, "test.tsx")).toEqual(["Foo", "bar", "baz"]);
+  });
+
+  it("should not report meta properties as references", () => {
+    const code = `
+    const url = import.meta.url
+    function f() { return new.target }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report import attribute keys as references", () => {
+    const code = `
+    import data from './data.json' with { type: 'json' }
+    data
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare enums and not report their members as references", () => {
+    const code = `
+    enum E { A, B }
+    const x = E.A
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare namespaces and not report their names as references", () => {
+    const code = `
+    namespace NS { export const a = 1 }
+    NS.a
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report index signature parameters as references", () => {
+    const code = `
+    interface I { [key: string]: number }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare function overloads and declare functions", () => {
+    const code = `
+    declare function foo(a: number): void
+    function bar(b: string): void
+    function bar(b) { return b }
+    foo(bar)
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should declare constructor parameter properties", () => {
+    const code = `
+    class C {
+      constructor(private x: number, public y: string) {
+        x; y
+      }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report type-only heritage clauses as references", () => {
+    const code = `
+    class A implements I {}
+    interface B extends C {}
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report accessor property keys as references", () => {
+    const code = `
+    class C {
+      accessor foo = bar;
+      accessor [baz] = 1;
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["bar", "baz"]);
+  });
+
+  it("should not report function type parameter names as references", () => {
+    const code = `
+    type Fn = (param1: string, param2?: number) => void
+    interface I {
+      (param3: string): void
+      new (param4: string): unknown
+      method(param5: string): void
+    }
+    const ctor: new (param6: string) => unknown = class {}
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not report abstract class members as references", () => {
+    const code = `
+    abstract class C1 {
+      abstract prop: string
+      abstract method(param1: string): void
+      abstract get getter(): number
+      abstract accessor accessor1: number
+      abstract [ref1]: string
+    }
+    declare class C2 {
+      method(param2: string): void
+    }
+    class C3 {
+      overloaded(param3: string): void
+      overloaded(param3) { return param3 }
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["ref1"]);
+  });
+
+  it("should declare import equals bindings", () => {
+    const code = `
+    import A = require('mod')
+    A
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should resolve enum member references in initializers", () => {
+    expect(getUnmatchedIdentifiers(`enum E { A, B = A }`)).toEqual([]);
+    expect(getUnmatchedIdentifiers(`enum E { A }\nA`)).toEqual(["A"]);
+  });
+
+  it("should not declare the global identifier from declare global", () => {
+    const code = `
+    declare global { interface Window {} }
+    global
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["global"]);
+  });
+
+  it("should report type-only references depending on the mode", () => {
+    const code = `
+    const x: SomeType = load<OtherType>()
+    class A implements I {}
+    interface B extends C {}
+    type T = NS.Inner
+    type Q = typeof runtimeValue
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["load", "runtimeValue"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual([
+      "C",
+      "I",
+      "NS",
+      "OtherType",
+      "SomeType",
+    ]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([
+      "C",
+      "I",
+      "NS",
+      "OtherType",
+      "SomeType",
+      "load",
+      "runtimeValue",
+    ]);
+  });
+
+  it("should resolve type references to local type declarations", () => {
+    const code = `
+    interface Foo {}
+    type Bar<T> = T | Foo
+    class Klass {}
+    const x: Foo = new Klass()
+    const y: Unknown = 1
+    console.log(Foo)
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["Foo", "console"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["Unknown"]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([
+      "Foo",
+      "Unknown",
+      "console",
+    ]);
+  });
+
+  it("should handle unnamed declarations and non-identifier module names", () => {
+    expect(getUnmatchedIdentifiers(`export default function () { ref1 }`)).toEqual(["ref1"]);
+    expect(getUnmatchedIdentifiers(`export default class {}`)).toEqual([]);
+    expect(
+      getUnmatchedIdentifiers(`const A = class {}\nconst B = class Named { m() { Named } }`),
+    ).toEqual([]);
+    expect(getUnmatchedIdentifiers(`declare module "mod" {}`)).toEqual([]);
+    expect(getUnmatchedIdentifiers(`try {} catch { ref2 }`)).toEqual(["ref2"]);
+    expect(getUnmatchedIdentifiers(`const [, ...rest] = arr`)).toEqual(["arr"]);
+    expect(getUnmatchedIdentifiers(`enum E { "str" = 1 }`)).toEqual([]);
+    expect(
+      getUnmatchedIdentifiers(`export default function (): void;\nexport default function () {}`),
+    ).toEqual([]);
+  });
+
+  it("should declare mapped type keys and not report them as references", () => {
+    const code = `
+    type X = { [K in keyof Y]: K }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["Y"]);
+  });
+
+  it("should not leak type parameters out of their declarations", () => {
+    const code = `
+    class Foo<T> {
+      method(value: T): T { return value }
+    }
+    declare function df<U>(x: U): U
+    interface Bar<V> { prop: V }
+    const marker = 1
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "all" })).toEqual([]);
+
+    const scopeTracker = new ScopeTracker();
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "VariableDeclaration") {
+          for (const name of ["T", "U", "V"]) {
+            expect(scopeTracker.isDeclared(name, { mode: "all" })).toBe(false);
+          }
+        }
+      },
+    });
+  });
+
+  it("should detect references in JSX member expressions", () => {
+    expect(getUnmatchedIdentifiers(`const el = <Foo.Bar.baz />`, "test.tsx")).toEqual(["Foo"]);
+    expect(getUnmatchedIdentifiers(`const el = <foo.bar />`, "test.tsx")).toEqual(["foo"]);
+  });
+
+  it("should not report JSX identifiers as type references", () => {
+    const code = `const el = <Foo prop={bar}>{baz}</Foo>`;
+
+    expect(getUnmatchedIdentifiers(code, "test.tsx", { mode: "type" })).toEqual([]);
+  });
+
+  function collectNodes(code: string, sourceFilename = filename): Node[] {
+    const nodes: Node[] = [];
+    parseAndWalk(code, sourceFilename, {
+      enter(node) {
+        nodes.push(node);
+      },
+    });
+    return nodes;
+  }
+
+  it("should not consider detached nodes to be bindings or references", () => {
+    const identifier = collectNodes("foo").find((n) => n.type === "Identifier");
+    assert(identifier);
+
+    expect(isOnlyBindingIdentifier(identifier, null)).toBe(false);
+    expect(isBindingIdentifier(identifier, null)).toBe(false);
+    expect(isReferenceIdentifier(identifier, null)).toBe(false);
+  });
+
+  it("should match identifiers nested in function parameter patterns", () => {
+    const nodes = collectNodes(
+      `function fn([a = 1, , ...rest], { b: renamed, ...others }, ...variadic) { fn() }`,
+    );
+    const fn = nodes.find((n) => n.type === "FunctionDeclaration");
+    assert(fn);
+    const identifier = (name: string) => {
+      const node = nodes.find((n) => n.type === "Identifier" && n.name === name);
+      assert(node);
+      return node;
+    };
+
+    expect(isOnlyBindingIdentifier(identifier("a"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("rest"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("renamed"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("others"), fn)).toBe(true);
+    expect(isOnlyBindingIdentifier(identifier("variadic"), fn)).toBe(true);
+    // property keys are not bindings of the function
+    expect(isOnlyBindingIdentifier(identifier("b"), fn)).toBe(false);
+  });
+
+  it("should treat constructor parameter properties as bindings of the constructor", () => {
+    const nodes = collectNodes(`class A { constructor(private p = 1) {} }`);
+    const constructorFn = nodes.find((n) => n.type === "FunctionExpression");
+    const parameter = nodes.find((n) => n.type === "Identifier" && n.name === "p");
+    assert(constructorFn && parameter);
+
+    expect(isOnlyBindingIdentifier(parameter, constructorFn)).toBe(true);
+  });
+
+  // @todo: remove in v2
+  it("should preserve the legacy behavior of the deprecated isBindingIdentifier", () => {
+    const identifiers = new Map<string, { node: Node; parent: Node | null }>();
+    parseAndWalk(
+      `
+      import def, { imp as alias } from 'x'
+      import * as ns from 'y'
+      enum E {}
+      namespace N {}
+      function fn(a) { obj.prop; ({ key: 1, short }); class C { method() {} field = 2 } }
+      `,
+      filename,
+      {
+        enter(node, parent) {
+          if (node.type === "Identifier") {
+            identifiers.set(node.name, { node, parent });
+          }
+        },
+      },
+    );
+    const byName = (name: string) => {
+      const entry = identifiers.get(name);
+      assert(entry);
+      return entry;
+    };
+
+    // binding positions behave the same in both implementations,
+    // including the ones added after the deprecation (imports, enums, namespaces, ...)
+    for (const name of ["fn", "a", "C", "def", "alias", "ns", "E", "N"]) {
+      const { node, parent } = byName(name);
+      expect(isBindingIdentifier(node, parent)).toBe(true);
+      expect(isOnlyBindingIdentifier(node, parent)).toBe(true);
+    }
+
+    // the imported name of `import { imp as alias }` is not a binding
+    const imported = byName("imp");
+    expect(isBindingIdentifier(imported.node, imported.parent)).toBe(false);
+    expect(isOnlyBindingIdentifier(imported.node, imported.parent)).toBe(false);
+
+    // non-reference positions the legacy implementation also reports as bindings
+    for (const name of ["prop", "key", "method", "field"]) {
+      const { node, parent } = byName(name);
+      expect(isBindingIdentifier(node, parent)).toBe(true);
+      expect(isOnlyBindingIdentifier(node, parent)).toBe(false);
+    }
+
+    // shorthand property values are references in both
+    const short = byName("short");
+    expect(isBindingIdentifier(short.node, short.parent)).toBe(false);
+    expect(isOnlyBindingIdentifier(short.node, short.parent)).toBe(false);
+  });
+
+  it("should not report JSX identifiers in non-JSX positions", () => {
+    const nodes = collectNodes(`const el = <div />`, "test.tsx");
+    const jsxIdentifier = nodes.find((n) => n.type === "JSXIdentifier");
+    const program = nodes.find((n) => n.type === "Program");
+    assert(jsxIdentifier && program);
+
+    expect(isReferenceIdentifier(jsxIdentifier, program)).toBe(false);
+  });
 });
 
 export class TestScopeTracker extends ScopeTracker {
@@ -889,18 +1741,18 @@ export class TestScopeTracker extends ScopeTracker {
     return this.scopeIndexStack;
   }
 
-  isDeclaredInScope(identifier: string, scope: string) {
+  isDeclaredInScope(identifier: string, scope: string, options?: ScopeTrackerQueryOptions) {
     const oldKey = this.scopeIndexKey;
     this.scopeIndexKey = scope;
-    const result = this.isDeclared(identifier);
+    const result = this.isDeclared(identifier, options);
     this.scopeIndexKey = oldKey;
     return result;
   }
 
-  getDeclarationFromScope(identifier: string, scope: string) {
+  getDeclarationFromScope(identifier: string, scope: string, options?: ScopeTrackerQueryOptions) {
     const oldKey = this.scopeIndexKey;
     this.scopeIndexKey = scope;
-    const result = this.getDeclaration(identifier);
+    const result = this.getDeclaration(identifier, options);
     this.scopeIndexKey = oldKey;
     return result;
   }
