@@ -313,12 +313,16 @@ export class ScopeTracker {
         break;
 
       case "ImportDeclaration":
-        // imports are referencable both as values and as types
+        // imports are referencable both as values and as types,
+        // except type-only imports
         for (const specifier of node.specifiers) {
+          const isTypeOnly =
+            node.importKind === "type" ||
+            (specifier.type === "ImportSpecifier" && specifier.importKind === "type");
           this.declareIdentifier(
             specifier.local.name,
             new ScopeTrackerImport(specifier, this.scopeIndexKey, node),
-            { value: true, type: true },
+            { value: !isTypeOnly, type: true },
           );
         }
         break;

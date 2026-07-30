@@ -519,6 +519,37 @@ describe("scope tracker", () => {
     expect(scopeTracker.getScopes().get("")?.size).toBe(3);
   });
 
+  it("should declare type-only imports in the type namespace only", () => {
+    const code = `
+    import type Foo from 'module-a'
+    import type { Bar } from 'module-b'
+    import type * as Ns from 'module-c'
+    import { type Inline, value } from 'module-d'
+    const marker = 1
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let checked = false;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "Identifier" && node.name === "marker") {
+          checked = true;
+          for (const name of ["Foo", "Bar", "Ns", "Inline"]) {
+            expect(scopeTracker.isDeclared(name, { mode: "type" })).toBe(true);
+            expect(scopeTracker.isDeclared(name, { mode: "value" })).toBe(false);
+          }
+
+          expect(scopeTracker.isDeclared("value", { mode: "value" })).toBe(true);
+          expect(scopeTracker.isDeclared("value", { mode: "type" })).toBe(true);
+        }
+      },
+    });
+
+    expect(checked).toBe(true);
+  });
+
   it("should resolve identifiers used as switch case labels", () => {
     const code = `
     import { foo } from './foo'
