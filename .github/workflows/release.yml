@@ -40,8 +40,11 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
 
+      - name: Install dependencies
+        run: vp install --frozen-lockfile
+
       - name: Publish to npm
-        run: pnpm publish --provenance --access public
+        run: vp pm publish --provenance --access public --no-git-checks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
