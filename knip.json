@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "exclude": ["catalog"],
-  "entry": ["src/index.ts", "vite.config.ts", "test/**/*.test.ts"],
-  "ignoreDependencies": ["@vitest/coverage-v8"]
+  "entry": ["src/index.ts", "vite.config.ts", "test/**/*.test.ts", "test/**/*.bench.ts"],
+  "ignoreDependencies": ["@vitest/coverage-v8", "@vue/compiler-sfc"]
 }

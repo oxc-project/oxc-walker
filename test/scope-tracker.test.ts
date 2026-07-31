@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
 import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
@@ -1725,6 +1726,150 @@ describe("reference identifiers", () => {
     assert(jsxIdentifier && program);
 
     expect(isReferenceIdentifier(jsxIdentifier, program)).toBe(false);
+  });
+});
+
+describe("optimized scope tracking without callbacks", () => {
+  it("should produce identical scope data to a walk with a no-op callback", () => {
+    const code = `
+    import { imported } from "module"
+    const topLevel = 1
+    const [, holey = imported, ...restOfIt] = [, 2]
+    function outer(param, { destructured, nested: [inArray] }) {
+      const inner = param + topLevel
+      try {
+        inner.toString()
+      }
+      catch (err) {
+        err.toString()
+      }
+      for (const item of []) {
+        item.toString()
+      }
+      return function named() { return inner }
+    }
+    const arrow = (withDefault = 1) => withDefault
+    class Klass {
+      method(methodParam) { return methodParam }
+    }
+    const expr = class NamedExpr {}
+    interface Iface { prop: string }
+    type Alias<T> = T[]
+    enum Enum { A, B }
+    // non-node object and primitive values: \`regex\` of a regexp literal and
+    // \`value\` of template quasis are plain objects without a \`type\`,
+    // a bigint value is a non-object primitive
+    const re = /ab+c/gi
+    const tpl = \`x\${re.source}y\`
+    const big = 10n
+    `;
+
+    const snapshot = (tracker: TestScopeTracker) =>
+      [...tracker.getScopes().entries()].map(([scope, declarations]) => [
+        scope,
+        [...declarations.entries()].map(([name, node]) => `${name}:${node.type}`),
+      ]);
+
+    const fastTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    const { program } = parseAndWalk(code, filename, { scopeTracker: fastTracker });
+
+    const enterTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(program, { scopeTracker: enterTracker, enter() {} });
+
+    const leaveTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(program, { scopeTracker: leaveTracker, leave() {} });
+
+    const expected = snapshot(enterTracker);
+    expect(expected.flatMap(([, declarations]) => declarations).length).toBeGreaterThan(10);
+    expect(snapshot(fastTracker)).toStrictEqual(expected);
+    expect(snapshot(leaveTracker)).toStrictEqual(expected);
+  });
+
+  it("should return the root node", () => {
+    const { program } = parseAndWalk("const a = 1", filename, {});
+    expect(walk(program, { scopeTracker: new ScopeTracker() })).toBe(program);
+  });
+
+  it("should track declarations from array patterns with holes", () => {
+    const code = `const [, second, ...rest] = [, 1, 2, 3]`;
+
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    parseAndWalk(code, filename, { scopeTracker });
+
+    expect(scopeTracker.isDeclaredInScope("second", "")).toBe(true);
+    expect(scopeTracker.isDeclaredInScope("rest", "")).toBe(true);
+  });
+
+  it("should track scopes when walking a non-Program subtree", () => {
+    const code = `
+    function fn(param) {
+      const local = param
+      return local
+    }
+    `;
+
+    let fn: Node | undefined;
+    parseAndWalk(code, filename, {
+      enter(node) {
+        if (node.type === "FunctionDeclaration") {
+          fn = node;
+        }
+      },
+    });
+    assert(fn);
+
+    const scopeTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fn, { scopeTracker });
+
+    const declaredNames = [...scopeTracker.getScopes().values()].flatMap((declarations) => [
+      ...declarations.keys(),
+    ]);
+    expect(declaredNames).toContain("param");
+    expect(declaredNames).toContain("local");
+  });
+
+  it("should keep the scope enter fast path in sync with the node types it guards", () => {
+    const source = readFileSync(new URL("../src/scope-tracker.ts", import.meta.url), "utf8");
+    const { program } = parseAndWalk(source, "scope-tracker.ts", {});
+
+    const guardedTypes = new Set<string>();
+    const handledTypes = new Set<string>();
+
+    walk(program, {
+      enter(node) {
+        if (
+          node.type === "VariableDeclarator" &&
+          node.id.type === "Identifier" &&
+          node.id.name === "SCOPE_ENTER_TYPES"
+        ) {
+          assert(node.init?.type === "NewExpression");
+          const [elements] = node.init.arguments;
+          assert(elements?.type === "ArrayExpression");
+          for (const element of elements.elements) {
+            assert(element?.type === "Literal" && typeof element.value === "string");
+            guardedTypes.add(element.value);
+          }
+        }
+
+        if (
+          node.type === "PropertyDefinition" &&
+          node.key.type === "Identifier" &&
+          node.key.name === "processNodeEnter"
+        ) {
+          walk(node, {
+            enter(inner) {
+              if (inner.type === "SwitchCase" && inner.test?.type === "Literal") {
+                assert(typeof inner.test.value === "string");
+                handledTypes.add(inner.test.value);
+              }
+            },
+          });
+        }
+      },
+    });
+
+    expect(handledTypes.size).toBeGreaterThan(20);
+    expect([...guardedTypes].sort()).toEqual([...handledTypes].sort());
   });
 });
 
