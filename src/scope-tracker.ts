@@ -18,6 +18,7 @@ import type { Identifier } from "./walk";
 import { walk } from "./walk";
 
 export interface ScopeTrackerProtected {
+  onWalkStart: (root: Node) => void;
   processNodeEnter: (node: Node) => void;
   processNodeLeave: (node: Node) => void;
 }
@@ -48,10 +49,17 @@ const SCOPE_ENTER_TYPES = new Set<Node["type"]>([
   "TSTypeParameter",
   "TSMappedType",
   "TSEnumBody",
+  "TSMethodSignature",
+  "TSCallSignatureDeclaration",
+  "TSConstructSignatureDeclaration",
+  "TSFunctionType",
+  "TSConstructorType",
+  "TSConditionalType",
   "CatchClause",
   "ForStatement",
   "ForOfStatement",
   "ForInStatement",
+  "SwitchStatement",
 ]);
 
 /**
@@ -123,6 +131,11 @@ export class ScopeTracker {
   protected scopeIndexKey = "";
   protected scopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
   protected typeScopes: Map<string, Map<string, ScopeTrackerNode>> = new Map();
+  /**
+   * The implicit `arguments` keyed by the function that introduces them,
+   * so that repeated queries return the same instance.
+   */
+  protected implicitArguments = new WeakMap<Function, ScopeTrackerFunctionArguments>();
 
   protected options: Partial<ScopeTrackerOptions>;
   protected isFrozen = false;
@@ -130,6 +143,14 @@ export class ScopeTracker {
   constructor(options: ScopeTrackerOptions = {}) {
     this.options = options;
   }
+
+  protected onWalkStart: ScopeTrackerProtected["onWalkStart"] = (root) => {
+    if (this.scopeIndexStack.length === 0 && root.type !== "Program") {
+      // when the walk does not start at a Program, initialize the root frame
+      // so that the first pushed scope gets its own key instead of the root ""
+      this.scopeIndexStack.push(0);
+    }
+  };
 
   protected pushScope(owner: Node) {
     const depthIndex = this.scopeIndexStack[this.scopeIndexStack.length - 1];
@@ -158,17 +179,49 @@ export class ScopeTracker {
     this.scopeIndexKey = this.scopeKeyStack.pop() ?? "";
   }
 
+  /**
+   * Get the key of the active scope at the given index of the scope stacks.
+   */
+  protected getScopeKeyAt(index: number) {
+    // `scopeKeyStack[i]` holds the key of the parent of the scope at `i`,
+    // so the key of the scope at `index` is the next entry, or the current key at the top
+    return index === this.scopeKeyStack.length - 1
+      ? this.scopeIndexKey
+      : this.scopeKeyStack[index + 1]!;
+  }
+
+  /**
+   * Get the key of the closest function-like scope (function bodies, static blocks,
+   * module blocks and the root scope), which is where `var` declarations are hoisted to.
+   */
+  protected getVarScopeKey(): string {
+    const owners = this.scopeOwnerStack;
+    for (let i = owners.length - 1; i >= 0; i--) {
+      switch (owners[i]!.type) {
+        case "FunctionDeclaration":
+        case "FunctionExpression":
+        case "ArrowFunctionExpression":
+        case "TSDeclareFunction":
+        case "Program":
+        case "StaticBlock":
+        case "TSModuleBlock":
+          return this.getScopeKeyAt(i);
+      }
+    }
+    return "";
+  }
+
   protected declareInNamespace(
     scopes: Map<string, Map<string, ScopeTrackerNode>>,
     name: string,
-    data: ScopeTrackerNode,
+    node: ScopeTrackerNode,
   ) {
-    let scope = scopes.get(this.scopeIndexKey);
+    let scope = scopes.get(node.scope);
     if (!scope) {
       scope = new Map();
-      scopes.set(this.scopeIndexKey, scope);
+      scopes.set(node.scope, scope);
     }
-    scope.set(name, data);
+    scope.set(name, node);
   }
 
   protected declareIdentifier(
@@ -210,15 +263,21 @@ export class ScopeTracker {
       return;
     }
 
+    // `var` declarations are hoisted to the enclosing function-like scope
+    const scopeKey =
+      parent.type === "VariableDeclaration" && parent.kind === "var"
+        ? this.getVarScopeKey()
+        : this.scopeIndexKey;
+
     const identifiers = getPatternIdentifiers(pattern);
     for (const identifier of identifiers) {
       this.declareIdentifier(
         identifier.name,
         parent.type === "VariableDeclaration"
-          ? new ScopeTrackerVariable(identifier, this.scopeIndexKey, parent)
+          ? new ScopeTrackerVariable(identifier, scopeKey, parent)
           : parent.type === "CatchClause"
-            ? new ScopeTrackerCatchParam(identifier, this.scopeIndexKey, parent)
-            : new ScopeTrackerFunctionParam(identifier, this.scopeIndexKey, parent),
+            ? new ScopeTrackerCatchParam(identifier, scopeKey, parent)
+            : new ScopeTrackerFunctionParam(identifier, scopeKey, parent),
       );
     }
   }
@@ -232,7 +291,17 @@ export class ScopeTracker {
       case "Program":
       case "BlockStatement":
       case "StaticBlock":
+      case "SwitchStatement":
       case "TSModuleBlock":
+      // signatures and function types get a scope so that their type parameters
+      // do not leak to sibling members (`interface I { m<T>(x: T): T; prop: T }`)
+      case "TSMethodSignature":
+      case "TSCallSignatureDeclaration":
+      case "TSConstructSignatureDeclaration":
+      case "TSFunctionType":
+      case "TSConstructorType":
+      // `infer` declarations are scoped to the conditional type (`T extends (infer U)[] ? U : never`)
+      case "TSConditionalType":
         this.pushScope(node);
         break;
 
@@ -304,12 +373,16 @@ export class ScopeTracker {
         break;
 
       case "ImportDeclaration":
-        // imports are referencable both as values and as types
+        // imports are referencable both as values and as types,
+        // except type-only imports
         for (const specifier of node.specifiers) {
+          const isTypeOnly =
+            node.importKind === "type" ||
+            (specifier.type === "ImportSpecifier" && specifier.importKind === "type");
           this.declareIdentifier(
             specifier.local.name,
             new ScopeTrackerImport(specifier, this.scopeIndexKey, node),
-            { value: true, type: true },
+            { value: !isTypeOnly, type: true },
           );
         }
         break;
@@ -464,10 +537,32 @@ export class ScopeTracker {
    */
   getDeclaration(name: string, options?: ScopeTrackerQueryOptions): ScopeTrackerNode | null {
     const mode = options?.mode ?? "value";
-    return (
+    const declaration =
       (mode !== "type" ? this.getDeclarationIn(this.scopes, name) : null) ??
-      (mode !== "value" ? this.getDeclarationIn(this.typeScopes, name) : null)
-    );
+      (mode !== "value" ? this.getDeclarationIn(this.typeScopes, name) : null);
+
+    // the implicit `arguments` declaration of the closest regular function applies
+    // unless an explicit declaration shadows it
+    if (name === "arguments" && mode !== "type") {
+      const owners = this.scopeOwnerStack;
+      for (let i = owners.length - 1; i >= 0; i--) {
+        const owner = owners[i]!;
+        if (owner.type === "FunctionDeclaration" || owner.type === "FunctionExpression") {
+          const fnScope = this.getScopeKeyAt(i);
+          if (!declaration || isChildScope(fnScope, declaration.scope)) {
+            let implicit = this.implicitArguments.get(owner);
+            if (!implicit) {
+              implicit = new ScopeTrackerFunctionArguments(owner, fnScope);
+              this.implicitArguments.set(owner, implicit);
+            }
+            return implicit;
+          }
+          break;
+        }
+      }
+    }
+
+    return declaration;
   }
 
   /**
@@ -892,7 +987,9 @@ export function getUndeclaredIdentifiersInFunction(node: Function | ArrowFunctio
  * @returns true if scope A is a child of scope B, false otherwise (also when they are the same)
  */
 function isChildScope(a: string, b: string) {
-  return a.startsWith(b) && a.length > b.length;
+  // the segment boundary check prevents sibling scopes sharing a string prefix
+  // (e.g. `10` and `1`) from being treated as nested
+  return a.length > b.length && a.startsWith(b) && (b === "" || a[b.length] === "-");
 }
 
 abstract class BaseNode<T extends Node = Node> {
@@ -974,6 +1071,18 @@ export class ScopeTrackerFunction extends BaseNode<Function | ArrowFunctionExpre
   }
 }
 
+export class ScopeTrackerFunctionArguments extends BaseNode<Function> {
+  type = "FunctionArguments" as const;
+
+  get start() {
+    return this.node.start;
+  }
+
+  get end() {
+    return this.node.end;
+  }
+}
+
 export class ScopeTrackerVariable extends BaseNode<Identifier> {
   type = "Variable" as const;
   variableNode: VariableDeclaration;
@@ -1031,6 +1140,7 @@ export class ScopeTrackerCatchParam extends BaseNode {
 export type ScopeTrackerNode =
   | ScopeTrackerFunctionParam
   | ScopeTrackerFunction
+  | ScopeTrackerFunctionArguments
   | ScopeTrackerVariable
   | ScopeTrackerIdentifier
   | ScopeTrackerImport

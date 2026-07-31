@@ -5,6 +5,7 @@ export {
   isReferenceIdentifier,
   ScopeTrackerFunctionParam,
   ScopeTrackerFunction,
+  ScopeTrackerFunctionArguments,
   ScopeTrackerVariable,
   ScopeTrackerIdentifier,
   ScopeTrackerImport,

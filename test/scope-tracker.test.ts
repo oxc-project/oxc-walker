@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import type { Node } from "oxc-parser";
 import { assert, describe, expect, it } from "vite-plus/test";
-import type { IsReferenceIdentifierOptions, ScopeTrackerQueryOptions } from "../src";
+import type {
+  IsReferenceIdentifierOptions,
+  ScopeTrackerNode,
+  ScopeTrackerQueryOptions,
+} from "../src";
 import {
   getUndeclaredIdentifiersInFunction,
   isBindingIdentifier,
@@ -68,6 +72,49 @@ describe("scope tracker", () => {
     });
 
     expect(scopeTracker.getScopes().size).toBe(2);
+  });
+
+  it("should create separate scopes when walking a non-Program root", () => {
+    let fnDecl: Node | undefined;
+    let fnExpr: Node | undefined;
+    parseAndWalk(
+      `
+      function foo(p) { const x = 1 }
+      const f = function bar(q) { const y = 1 }
+      `,
+      filename,
+      {
+        enter(node) {
+          if (node.type === "FunctionDeclaration") {
+            fnDecl = node;
+          } else if (node.type === "FunctionExpression") {
+            fnExpr = node;
+          }
+        },
+      },
+    );
+    assert(fnDecl && fnExpr);
+
+    // when walking a function directly, its name is declared in the root scope,
+    // while the parameters and body get their own child scopes
+    const declTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fnDecl, { scopeTracker: declTracker });
+
+    const declScopes = declTracker.getScopes();
+    expect([...(declScopes.get("")?.keys() ?? [])]).toEqual(["foo"]);
+    expect([...(declScopes.get("0")?.keys() ?? [])]).toEqual(["p"]);
+    expect([...(declScopes.get("0-0")?.keys() ?? [])]).toEqual(["x"]);
+
+    // a function expression pushes a scope for its name as well,
+    // and nothing is declared in the root scope
+    const exprTracker = new TestScopeTracker({ preserveExitedScopes: true });
+    walk(fnExpr, { scopeTracker: exprTracker });
+
+    const exprScopes = exprTracker.getScopes();
+    expect(exprScopes.get("")).toBeUndefined();
+    expect([...(exprScopes.get("0")?.keys() ?? [])]).toEqual(["bar"]);
+    expect([...(exprScopes.get("0-0")?.keys() ?? [])]).toEqual(["q"]);
+    expect([...(exprScopes.get("0-0-0")?.keys() ?? [])]).toEqual(["y"]);
   });
 
   it("should generate scope key correctly and not allocate unnecessary scopes", () => {
@@ -476,6 +523,37 @@ describe("scope tracker", () => {
     expect(scopeTracker.getScopes().get("")?.size).toBe(3);
   });
 
+  it("should declare type-only imports in the type namespace only", () => {
+    const code = `
+    import type Foo from 'module-a'
+    import type { Bar } from 'module-b'
+    import type * as Ns from 'module-c'
+    import { type Inline, value } from 'module-d'
+    const marker = 1
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let checked = false;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "Identifier" && node.name === "marker") {
+          checked = true;
+          for (const name of ["Foo", "Bar", "Ns", "Inline"]) {
+            expect(scopeTracker.isDeclared(name, { mode: "type" })).toBe(true);
+            expect(scopeTracker.isDeclared(name, { mode: "value" })).toBe(false);
+          }
+
+          expect(scopeTracker.isDeclared("value", { mode: "value" })).toBe(true);
+          expect(scopeTracker.isDeclared("value", { mode: "type" })).toBe(true);
+        }
+      },
+    });
+
+    expect(checked).toBe(true);
+  });
+
   it("should resolve identifiers used as switch case labels", () => {
     const code = `
     import { foo } from './foo'
@@ -820,6 +898,44 @@ describe("scope tracker", () => {
     ]);
   });
 
+  it("should not treat sibling scopes with a shared digit prefix as nested", () => {
+    // 11 sibling blocks produce the scope keys '0' through '10'
+    // scope '10' shares the string prefix '1' with scope '1' but is its sibling, not its child
+    const blocks = Array.from({ length: 10 }, (_, i) => `{ const x${i} = ${i} }`).join("\n");
+    const code = `
+    ${blocks}
+    {
+      const x10 = 10
+      {
+        const y = 11
+      }
+    }
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let checked = false;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "Identifier" && node.name === "y") {
+          checked = true;
+          expect(scopeTracker.getCurrentScope()).toBe("10-0");
+          expect(scopeTracker.isCurrentScopeUnder("")).toBe(true);
+          expect(scopeTracker.isCurrentScopeUnder("10")).toBe(true);
+          expect(scopeTracker.isCurrentScopeUnder("1")).toBe(false);
+
+          const declaration = scopeTracker.getDeclaration("x10");
+          assert(declaration);
+          expect(declaration.isUnderScope("")).toBe(true);
+          expect(declaration.isUnderScope("1")).toBe(false);
+        }
+      },
+    });
+
+    expect(checked).toBe(true);
+  });
+
   it("should provide the position of the whole relevant node for declarations", () => {
     const code = `import { imp } from 'mod'
 const a = 1
@@ -861,6 +977,37 @@ class Klass {}
     assert(klass instanceof ScopeTrackerIdentifier);
     expect(klass.start).toBe(code.indexOf("Klass"));
     expect(klass.end).toBe(code.indexOf("Klass") + "Klass".length);
+  });
+
+  it("should track declarations introduced by replacement nodes", () => {
+    const { program } = parseAndWalk("let replaced = 1", filename, {});
+    const replacement = program.body[0];
+    assert(replacement);
+
+    const code = `
+    let original = 1
+    original
+    `;
+
+    const scopeTracker = new ScopeTracker();
+    let referenceCount = 0;
+
+    parseAndWalk(code, filename, {
+      scopeTracker,
+      enter(node) {
+        if (node.type === "VariableDeclaration") {
+          this.replace(replacement);
+        }
+        if (node.type === "Identifier" && node.name === "original") {
+          referenceCount++;
+          expect(scopeTracker.isDeclared("replaced")).toBe(true);
+        }
+      },
+    });
+
+    // the walker walks the replacement's children instead of the original declaration,
+    // so the only `original` identifier left is the standalone reference
+    expect(referenceCount).toBe(1);
   });
 });
 
@@ -968,6 +1115,79 @@ describe("parsing", () => {
     });
 
     expect(processedFunctions).toBe(5);
+  });
+
+  it("should treat the implicitly bound arguments as declared in a function", () => {
+    let fn: Node | undefined;
+    parseAndWalk(`const f = function () { return arguments.length }`, filename, {
+      enter(node) {
+        if (node.type === "FunctionExpression") {
+          fn = node;
+        }
+      },
+    });
+    assert(fn?.type === "FunctionExpression");
+
+    // `arguments` is implicitly declared in regular functions
+    expect(getUndeclaredIdentifiersInFunction(fn)).toEqual([]);
+
+    let arrow: Node | undefined;
+    parseAndWalk(`const arrow = () => arguments.length`, filename, {
+      enter(node) {
+        if (node.type === "ArrowFunctionExpression") {
+          arrow = node;
+        }
+      },
+    });
+    assert(arrow?.type === "ArrowFunctionExpression");
+
+    // arrow functions don't declare `arguments`
+    expect(getUndeclaredIdentifiersInFunction(arrow)).toEqual(["arguments"]);
+
+    // an explicit declaration shadows the implicit `arguments`
+    const scopeTracker = new ScopeTracker();
+    let beforeDeclaration: ScopeTrackerNode | null | undefined;
+    let shadowed: ScopeTrackerNode | null | undefined;
+    parseAndWalk(
+      `const f = function () {
+        const before = 1
+        let arguments = 42
+        return arguments
+      }`,
+      filename,
+      {
+        scopeTracker,
+        enter(node) {
+          if (node.type === "Identifier" && node.name === "before") {
+            beforeDeclaration = scopeTracker.getDeclaration("arguments");
+            expect(scopeTracker.getDeclaration("arguments")).toBe(beforeDeclaration);
+          } else if (node.type === "ReturnStatement") {
+            shadowed = scopeTracker.getDeclaration("arguments");
+          }
+        },
+      },
+    );
+
+    // the function itself defines `arguments`, so it is already declared before the explicit declaration
+    assert(beforeDeclaration);
+    expect(beforeDeclaration.type).toBe("FunctionArguments");
+
+    // after the explicit declaration, it resolves to the explicit binding
+    assert(shadowed instanceof ScopeTrackerVariable);
+    expect(shadowed.node.name).toBe("arguments");
+
+    // a parameter named `arguments` shadows the implicit binding as well
+    const paramScopeTracker = new ScopeTracker();
+    let param: ScopeTrackerNode | null | undefined;
+    parseAndWalk(`const f = function (arguments) { return arguments }`, filename, {
+      scopeTracker: paramScopeTracker,
+      enter(node) {
+        if (node.type === "ReturnStatement") {
+          param = paramScopeTracker.getDeclaration("arguments");
+        }
+      },
+    });
+    assert(param instanceof ScopeTrackerFunctionParam);
   });
 
   it("should correctly compare identifiers defined in different scopes", () => {
@@ -1203,6 +1423,22 @@ describe("reference identifiers", () => {
     expect(getUnmatchedIdentifiers(code)).toEqual(["e1", "p1", "p2"]);
   });
 
+  it("should scope declarations in switch cases to the switch body", () => {
+    const code = `
+    const input = 1
+    switch (input) {
+      case 1:
+        let leaked = 1
+        break
+      default:
+        leaked = 2
+    }
+    const after = leaked
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["leaked"]);
+  });
+
   it("should resolve references to imports", () => {
     const code = `
     import { Bar } from 'foobar'
@@ -1356,6 +1592,84 @@ describe("reference identifiers", () => {
     `;
 
     expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should hoist var declarations to the enclosing function scope", () => {
+    const code = `
+    function fn(cond) {
+      if (cond) {
+        var fromBlock = 1
+      }
+      try {
+        var fromTry = 1
+      } catch (e) {
+        var fromCatch = 1
+      }
+      for (var i = 0; i < 1; i++) {}
+      for (var key in {}) {}
+      for (var item of []) {}
+      switch (cond) {
+        case 1:
+          var fromCase = 1
+      }
+      {
+        {
+          var fromNested = 1
+        }
+      }
+      return [fromBlock, fromTry, fromCatch, i, key, item, fromCase, fromNested]
+    }
+    {
+      var topLevel = 1
+    }
+    topLevel
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([]);
+  });
+
+  it("should not hoist var declarations past function boundaries", () => {
+    const code = `
+    function outer() {
+      var inFn = 1
+      const arrow = () => { var inArrow = 1 }
+      function inner() { var inInner = 1 }
+    }
+    class C {
+      static {
+        var inStatic = 1
+      }
+    }
+    namespace N {
+      var inNamespace = 1
+    }
+    inFn; inArrow; inInner; inStatic; inNamespace
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "inArrow",
+      "inFn",
+      "inInner",
+      "inNamespace",
+      "inStatic",
+    ]);
+  });
+
+  it("should report runtime globals and language constants as unresolved references", () => {
+    const code = `
+    const a = undefined ?? NaN ?? Infinity
+    const b = Array.from(console)
+    globalThis.foo
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual([
+      "Array",
+      "Infinity",
+      "NaN",
+      "console",
+      "globalThis",
+      "undefined",
+    ]);
   });
 
   it("should detect references in JSX", () => {
@@ -1605,6 +1919,41 @@ describe("reference identifiers", () => {
         }
       },
     });
+  });
+
+  it("should not leak type parameters of signatures to sibling members", () => {
+    const code = `
+    interface Props {
+      transform<U>(value: U): U
+      fallback: U
+    }
+    type Obj = {
+      method<M>(value: M): M
+      prop: M
+    }
+    type FnPair = [<F>(value: F) => F, F]
+    type CtorPair = [new <C>(value: C) => C, C]
+    interface WithCall {
+      <S>(value: S): S
+      also: S
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual([
+      "C",
+      "F",
+      "M",
+      "S",
+      "U",
+    ]);
+  });
+
+  it("should scope infer declarations to the conditional type", () => {
+    const code = `
+    type ElementType<T> = [T extends (infer U)[] ? U : never, U]
+    `;
+
+    expect(getUnmatchedIdentifiers(code, filename, { mode: "type" })).toEqual(["U"]);
   });
 
   it("should detect references in JSX member expressions", () => {
