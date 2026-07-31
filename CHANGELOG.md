@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0](https://github.com/oxc-project/oxc-walker/compare/v1.0.0...v1.1.0) (2026-07-31)
+
+
+### Features
+
+* add `isReferenceIdentifier` and `isOnlyBindingIdentifier` ([#344](https://github.com/oxc-project/oxc-walker/issues/344)) ([ee083fa](https://github.com/oxc-project/oxc-walker/commit/ee083fa214507099f6ef5803a779b74d3edc33a0))
+
+
+### Bug Fixes
+
+* improve scope tracking accuracy ([#347](https://github.com/oxc-project/oxc-walker/issues/347)) ([014fa17](https://github.com/oxc-project/oxc-walker/commit/014fa17aab41e4a0431494e515042e1f489d1caa))
+* use `@oxc-project/types` for ast types ([#332](https://github.com/oxc-project/oxc-walker/issues/332)) ([4ef7ab0](https://github.com/oxc-project/oxc-walker/commit/4ef7ab081eefcbe14961766b1dd0f7a3196671d1))
+
+
+### Performance Improvements
+
+* optimize walker & scope tracker ([#345](https://github.com/oxc-project/oxc-walker/issues/345)) ([b564d8f](https://github.com/oxc-project/oxc-walker/commit/b564d8f38ebe1c49e519791663b810f51eb739d9))
+* remove magic-regexp dependency ([#341](https://github.com/oxc-project/oxc-walker/issues/341)) ([fcedf6f](https://github.com/oxc-project/oxc-walker/commit/fcedf6f1c0371aa2e2e7187903f28c229d5c5323))
+
 ## [1.0.0](https://github.com/oxc-project/oxc-walker/compare/v0.7.0...v1.0.0) (2026-05-08)
 
 
