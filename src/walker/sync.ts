@@ -182,13 +182,8 @@ export class WalkerSync extends WalkerBase {
           if (Array.isArray(node)) {
             for (let i = 0; i < node.length; i++) {
               const child = node[i];
-              // perf: array elements can be holes (`null`) or non-node objects, so they need
-              // the same guards as the single-value branch below
-              if (!child || typeof child !== "object") {
-                continue;
-              }
-              if (typeof (child as Node).type === "string") {
-                _walkScopesOnly(child as Node);
+              if (isNode(child)) {
+                _walkScopesOnly(child);
               }
             }
 
