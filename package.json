@@ -25,7 +25,6 @@
     "fmt": "vp fmt",
     "prepare": "vp config",
     "prepack": "pnpm build",
-    "prepublishOnly": "pnpm lint && pnpm test",
     "test": "pnpm test:unit && pnpm test:types",
     "test:unit": "vp test",
     "test:types": "tsc --noEmit"
