@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/oxc-project/oxc-walker/compare/v1.1.0...v1.1.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* fix build script ([#350](https://github.com/oxc-project/oxc-walker/issues/350)) ([2438ec5](https://github.com/oxc-project/oxc-walker/commit/2438ec5443f9250362c0af7236d78f5f42175632))
+
 ## [1.1.0](https://github.com/oxc-project/oxc-walker/compare/v1.0.0...v1.1.0) (2026-07-31)
 
 
