@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
 
       - name: Install dependencies
         run: vp install --frozen-lockfile
