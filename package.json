@@ -31,12 +31,12 @@
     "test:types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@oxc-project/types": "0.144.0",
+    "@oxc-project/types": "0.145.0",
     "@types/node": "24.10.3",
     "@vitest/coverage-v8": "4.1.10",
     "@vue/compiler-sfc": "3.5.41",
     "knip": "^6.0.0",
-    "oxc-parser": "0.144.0",
+    "oxc-parser": "0.145.0",
     "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
