@@ -35,7 +35,7 @@ function isMissingModule(error: unknown, id: string): boolean {
 }
 
 /** @internal exported for testing */
-export function _resolveParseSync(require: (id: string) => unknown): ParseSync {
+export function _loadParseSync(require: (id: string) => unknown): ParseSync {
   const candidates = ["oxc-parser", "rolldown/utils"] as const;
   for (const id of candidates) {
     let mod: { parseSync?: ParseSync };
@@ -58,7 +58,7 @@ export function _resolveParseSync(require: (id: string) => unknown): ParseSync {
 }
 
 function resolveParseSync(): ParseSync {
-  cachedParseSync ||= _resolveParseSync(createRequire(import.meta.url));
+  cachedParseSync ||= _loadParseSync(createRequire(import.meta.url));
   return cachedParseSync;
 }
 
