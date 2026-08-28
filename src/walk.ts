@@ -21,22 +21,45 @@ type ParseSync = (
 
 let cachedParseSync: ParseSync | undefined;
 
-function resolveParseSync(): ParseSync {
-  if (cachedParseSync) return cachedParseSync;
-  const require = createRequire(import.meta.url);
+const MODULE_NOT_FOUND_CODES = new Set(["MODULE_NOT_FOUND", "ERR_MODULE_NOT_FOUND"]);
+
+/**
+ * Whether `error` means `id` itself is not installed, rather than `id` failing while loading
+ * (for example a package that is installed but is missing its platform-specific native binding).
+ */
+function isMissingModule(error: unknown, id: string): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  if (typeof code !== "string" || !MODULE_NOT_FOUND_CODES.has(code)) return false;
+  return typeof message === "string" && message.includes(`'${id}'`);
+}
+
+/** @internal exported for testing */
+export function _loadParseSync(require: (id: string) => unknown): ParseSync {
   const candidates = ["oxc-parser", "rolldown/utils"] as const;
   for (const id of candidates) {
+    let mod: { parseSync?: ParseSync };
     try {
-      const mod = require(id) as { parseSync?: ParseSync };
-      if (typeof mod.parseSync === "function") {
-        cachedParseSync = mod.parseSync;
-        return cachedParseSync;
-      }
-    } catch {}
+      mod = require(id) as { parseSync?: ParseSync };
+    } catch (error) {
+      if (isMissingModule(error, id)) continue;
+      throw new Error(
+        `oxc-walker: found \`${id}\` but failed to load it. Pass a \`parseSync\` function via the \`parseAndWalk\` options to bypass this lookup.`,
+        { cause: error },
+      );
+    }
+    if (typeof mod.parseSync === "function") {
+      return mod.parseSync;
+    }
   }
   throw new Error(
     "oxc-walker: could not resolve a `parseSync` implementation. Install `oxc-parser` or `rolldown` (and use `rolldown/utils`), or pass a `parseSync` function via the `parseAndWalk` options.",
   );
+}
+
+function resolveParseSync(): ParseSync {
+  cachedParseSync ||= _loadParseSync(createRequire(import.meta.url));
+  return cachedParseSync;
 }
 
 export type Identifier =
