@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/oxc-project/oxc-walker/compare/v1.1.1...v1.1.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* surface load errors when resolving `parseSync` ([#363](https://github.com/oxc-project/oxc-walker/issues/363)) ([a1514a7](https://github.com/oxc-project/oxc-walker/commit/a1514a7aa25504dc7630a7669ea8bf151f970626))
+
 ## [1.1.1](https://github.com/oxc-project/oxc-walker/compare/v1.1.0...v1.1.1) (2026-07-31)
 
 
