@@ -33,7 +33,7 @@
   "devDependencies": {
     "@oxc-project/types": "0.148.0",
     "@types/node": "24.10.3",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.0",
     "@vue/compiler-sfc": "3.5.42",
     "knip": "^6.0.0",
     "oxc-parser": "0.148.0",
