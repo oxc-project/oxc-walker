@@ -9,11 +9,6 @@ overrides:
   oxc-walker: link:.
   vite: "catalog:"
 
-registries:
-  https://registry-bridge.viteplus.dev/:
-    scopes: ["@voidzero-dev"]
-    prefix: vite-plus-preview
-
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
 trustPolicyExclude:
@@ -35,7 +30,7 @@ minimumReleaseAgeExclude:
   - "@oxlint/*"
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0
-  vite-plus: vite-plus-preview:1.0.0-rc.0
+  vite-plus: 1.0.0-rc.0
 peerDependencyRules:
   allowAny:
     - vite
