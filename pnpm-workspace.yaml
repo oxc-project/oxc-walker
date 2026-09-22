@@ -17,7 +17,7 @@ registries:
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
 trustPolicyExclude:
-  - vite-plus@0.0.0-commit.6b26ec56e76df770e2aa5ad78571d42d20b5383c
+  - vite-plus@1.0.0-rc.0
   - "@voidzero-dev/vite-plus-*"
 # oxc packages are published by the oxc project itself, so they are exempt from
 # pnpm 11's default `minimumReleaseAge` (1 day) supply-chain gate. Without this,
@@ -29,9 +29,49 @@ minimumReleaseAgeExclude:
   - "@oxc-project/*"
   - vite-plus
   - "@voidzero-dev/*"
+  - "@oxfmt/binding-android-arm-eabi@0.70.0"
+  - "@oxfmt/binding-android-arm64@0.70.0"
+  - "@oxfmt/binding-darwin-arm64@0.70.0"
+  - "@oxfmt/binding-darwin-x64@0.70.0"
+  - "@oxfmt/binding-freebsd-x64@0.70.0"
+  - "@oxfmt/binding-linux-arm-gnueabihf@0.70.0"
+  - "@oxfmt/binding-linux-arm-musleabihf@0.70.0"
+  - "@oxfmt/binding-linux-arm64-gnu@0.70.0"
+  - "@oxfmt/binding-linux-arm64-musl@0.70.0"
+  - "@oxfmt/binding-linux-ppc64-gnu@0.70.0"
+  - "@oxfmt/binding-linux-riscv64-gnu@0.70.0"
+  - "@oxfmt/binding-linux-riscv64-musl@0.70.0"
+  - "@oxfmt/binding-linux-s390x-gnu@0.70.0"
+  - "@oxfmt/binding-linux-x64-gnu@0.70.0"
+  - "@oxfmt/binding-linux-x64-musl@0.70.0"
+  - "@oxfmt/binding-openharmony-arm64@0.70.0"
+  - "@oxfmt/binding-win32-arm64-msvc@0.70.0"
+  - "@oxfmt/binding-win32-ia32-msvc@0.70.0"
+  - "@oxfmt/binding-win32-x64-msvc@0.70.0"
+  - "@oxlint/binding-android-arm-eabi@1.85.0"
+  - "@oxlint/binding-android-arm64@1.85.0"
+  - "@oxlint/binding-darwin-arm64@1.85.0"
+  - "@oxlint/binding-darwin-x64@1.85.0"
+  - "@oxlint/binding-freebsd-x64@1.85.0"
+  - "@oxlint/binding-linux-arm-gnueabihf@1.85.0"
+  - "@oxlint/binding-linux-arm-musleabihf@1.85.0"
+  - "@oxlint/binding-linux-arm64-gnu@1.85.0"
+  - "@oxlint/binding-linux-arm64-musl@1.85.0"
+  - "@oxlint/binding-linux-ppc64-gnu@1.85.0"
+  - "@oxlint/binding-linux-riscv64-gnu@1.85.0"
+  - "@oxlint/binding-linux-riscv64-musl@1.85.0"
+  - "@oxlint/binding-linux-s390x-gnu@1.85.0"
+  - "@oxlint/binding-linux-x64-gnu@1.85.0"
+  - "@oxlint/binding-linux-x64-musl@1.85.0"
+  - "@oxlint/binding-openharmony-arm64@1.85.0"
+  - "@oxlint/binding-win32-arm64-msvc@1.85.0"
+  - "@oxlint/binding-win32-ia32-msvc@1.85.0"
+  - "@oxlint/binding-win32-x64-msvc@1.85.0"
+  - oxfmt@0.70.0
+  - oxlint@1.85.0
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@0.0.0-commit.6b26ec56e76df770e2aa5ad78571d42d20b5383c
-  vite-plus: vite-plus-preview:0.0.0-commit.6b26ec56e76df770e2aa5ad78571d42d20b5383c
+  vite: npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0
+  vite-plus: vite-plus-preview:1.0.0-rc.0
 peerDependencyRules:
   allowAny:
     - vite
