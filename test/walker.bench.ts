@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { bench, describe } from "vite-plus/test";
+import { describe, test } from "vite-plus/test";
 import { isReferenceIdentifier, parseAndWalk, ScopeTracker, walk } from "../src";
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
@@ -23,45 +23,51 @@ const { program } = parseAndWalk(code, "compiler-sfc.js", {});
 let sink = 0;
 
 describe("walker on @vue/compiler-sfc", () => {
-  bench("walk", () => {
-    walk(program, {
-      enter(node) {
-        if (node.type === "Identifier") {
-          sink++;
-        }
-      },
-    });
+  test("walk", async ({ bench }) => {
+    await bench("walk", () => {
+      walk(program, {
+        enter(node) {
+          if (node.type === "Identifier") {
+            sink++;
+          }
+        },
+      });
+    }).run();
   });
 
-  bench("walk with scope tracking", () => {
-    walk(program, { scopeTracker: new ScopeTracker() });
-    sink++;
+  test("walk with scope tracking", async ({ bench }) => {
+    await bench("walk with scope tracking", () => {
+      walk(program, { scopeTracker: new ScopeTracker() });
+      sink++;
+    }).run();
   });
 
-  bench("detect unmatched identifiers", () => {
-    const scopeTracker = new ScopeTracker({ preserveExitedScopes: true });
+  test("detect unmatched identifiers", async ({ bench }) => {
+    await bench("detect unmatched identifiers", () => {
+      const scopeTracker = new ScopeTracker({ preserveExitedScopes: true });
 
-    // first pass to collect all declarations and hoist them
-    walk(program, { scopeTracker });
-    scopeTracker.freeze();
+      // first pass to collect all declarations and hoist them
+      walk(program, { scopeTracker });
+      scopeTracker.freeze();
 
-    const unmatched = new Set<string>();
-    walk(program, {
-      scopeTracker,
-      enter(node, parent) {
-        // re-export specifiers refer to the other module's exports
-        if (node.type === "ExportNamedDeclaration" && node.source) {
-          this.skip();
-          return;
-        }
-        if (node.type !== "Identifier" && node.type !== "JSXIdentifier") {
-          return;
-        }
-        if (isReferenceIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)) {
-          unmatched.add(node.name);
-        }
-      },
-    });
-    sink += unmatched.size;
+      const unmatched = new Set<string>();
+      walk(program, {
+        scopeTracker,
+        enter(node, parent) {
+          // re-export specifiers refer to the other module's exports
+          if (node.type === "ExportNamedDeclaration" && node.source) {
+            this.skip();
+            return;
+          }
+          if (node.type !== "Identifier" && node.type !== "JSXIdentifier") {
+            return;
+          }
+          if (isReferenceIdentifier(node, parent) && !scopeTracker.isDeclared(node.name)) {
+            unmatched.add(node.name);
+          }
+        },
+      });
+      sink += unmatched.size;
+    }).run();
   });
 });
