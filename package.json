@@ -31,7 +31,7 @@
     "test:types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@oxc-project/types": "0.151.0",
+    "@oxc-project/types": "0.152.0",
     "@types/node": "24.10.3",
     "@vitest/coverage-v8": "5.0.1",
     "@vue/compiler-sfc": "3.5.43",
