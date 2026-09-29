@@ -36,7 +36,7 @@
     "@vitest/coverage-v8": "5.0.1",
     "@vue/compiler-sfc": "3.5.43",
     "knip": "^6.0.0",
-    "oxc-parser": "0.151.0",
+    "oxc-parser": "0.152.0",
     "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
