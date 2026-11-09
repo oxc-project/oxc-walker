@@ -1655,6 +1655,25 @@ describe("reference identifiers", () => {
     ]);
   });
 
+  it("should not resolve parameter default values to var declarations in the function body", () => {
+    const code = `
+    function fn(a = fromFn) {
+      var fromFn = 1
+      fromFn
+    }
+    const expr = function (a = fromExpr) {
+      var fromExpr = 1
+      fromExpr
+    }
+    const arrow = (a = fromArrow) => {
+      var fromArrow = 1
+      fromArrow
+    }
+    `;
+
+    expect(getUnmatchedIdentifiers(code)).toEqual(["fromArrow", "fromExpr", "fromFn"]);
+  });
+
   it("should report runtime globals and language constants as unresolved references", () => {
     const code = `
     const a = undefined ?? NaN ?? Infinity

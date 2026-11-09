@@ -197,7 +197,21 @@ export class ScopeTracker {
   protected getVarScopeKey(): string {
     const owners = this.scopeOwnerStack;
     for (let i = owners.length - 1; i >= 0; i--) {
-      switch (owners[i]!.type) {
+      const owner = owners[i]!;
+      // `var` declarations in a function body are hoisted to the body scope, not the parameter scope,
+      // so that they are not visible from parameter default values (`function f(a = b) { var b }`)
+      if (owner.type === "BlockStatement" && i > 0) {
+        const fn = owners[i - 1]!;
+        if (
+          (fn.type === "FunctionDeclaration" ||
+            fn.type === "FunctionExpression" ||
+            fn.type === "ArrowFunctionExpression") &&
+          fn.body === owner
+        ) {
+          return this.getScopeKeyAt(i);
+        }
+      }
+      switch (owner.type) {
         case "FunctionDeclaration":
         case "FunctionExpression":
         case "ArrowFunctionExpression":
